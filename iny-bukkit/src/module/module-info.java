@@ -4,8 +4,6 @@
 module net.iridiummc.iny.bukkit {
     requires java.logging;
     requires transitive org.bukkit;
-    requires static com.google.common;
-    requires static org.jetbrains.annotations;
 
     exports net.iridiummc.iny;
     exports net.iridiummc.iny.api;

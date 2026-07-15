@@ -16,7 +16,7 @@ class BukkitArchitectureTest {
 
     @Test
     void bundledModuleExportsOnlyTheSupportedApiPackages() throws IOException {
-        Path descriptorPath = Path.of("build/classes/java/main/module-info.class");
+        Path descriptorPath = Path.of("build/classes/java/module/module-info.class");
         try (InputStream input = Files.newInputStream(descriptorPath)) {
             Set<String> exports = ModuleDescriptor.read(input).exports().stream()
                     .map(ModuleDescriptor.Exports::source)
