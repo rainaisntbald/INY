@@ -8,6 +8,7 @@ import net.iridiummc.iny.value.InySection;
 import net.iridiummc.iny.value.InyValue;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -65,7 +66,7 @@ public final class InyConfig {
     }
 
     /** Returns a required list whose elements are decoded as the requested type. */
-    public <T> ArrayList<T> getList(String path, Class<T> type) {
+    public <T> List<T> getList(String path, Class<T> type) {
         Objects.requireNonNull(type, "type");
         InyList list = getList(path);
         ArrayList<T> decoded = new ArrayList<>(list.values().size());

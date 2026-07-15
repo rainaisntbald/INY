@@ -55,7 +55,7 @@ class InyConfigTest {
                   - 3
                 """);
 
-        ArrayList<Integer> values = config.getList("values", Integer.class);
+        List<Integer> values = config.getList("values", Integer.class);
 
         assertEquals(new ArrayList<>(List.of(1, 2, 3)), values);
     }
