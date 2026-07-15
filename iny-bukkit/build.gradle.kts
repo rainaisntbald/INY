@@ -11,8 +11,9 @@ val bundledCore = configurations.create("bundledCore") {
 }
 
 dependencies {
-    api(project(":iny-core"))
+    compileOnly(project(":iny-core"))
     bundledCore(project(":iny-core"))
+    testImplementation(project(":iny-core"))
 
     compileOnly("io.papermc.paper:paper-api:26.1.2.build.74-stable")
     testImplementation("io.papermc.paper:paper-api:26.1.2.build.74-stable")
