@@ -30,7 +30,7 @@ final class MinecraftInyRegistry {
     private static final String DEFAULT_CONFIG = "config.iny";
 
     private final Plugin plugin;
-    private final Map<InyIdentifier, InyFactoryRegistration<?>> registrations;
+    private final Map<InyIdentifier, OwnedFactoryRegistration> registrations;
     private final AtomicReference<InyFactoryRegistry> factorySnapshot;
     private final Iny iny;
     private final ReadinessController readiness;
@@ -46,7 +46,9 @@ final class MinecraftInyRegistry {
         Iny base = Iny.builder()
                 .install(new MinecraftInyModule(plugin.getServer()))
                 .build();
-        this.registrations = new LinkedHashMap<>(base.factories().registrations());
+        this.registrations = new LinkedHashMap<>();
+        base.factories().registrations().forEach((identifier, registration) ->
+                registrations.put(identifier, new OwnedFactoryRegistration(plugin, registration)));
         this.factorySnapshot = new AtomicReference<>(base.factories());
         this.iny = base.withFactoryRegistry(this::activeFactorySnapshot);
         this.readiness = new ReadinessController(plugin, new BukkitReadinessScheduler(plugin), readyAction);
@@ -87,60 +89,71 @@ final class MinecraftInyRegistry {
         return activeFactorySnapshot();
     }
 
-    /** Registers a factory in this server's shared registry. */
+    /** Registers a factory owned by a plugin in this server's shared registry. */
     public synchronized <T> MinecraftInyRegistry registerFactory(
+            Plugin owner,
             InyIdentifier identifier,
             Class<T> resultType,
             InyFactory<T> factory
     ) {
-        return registerFactory(new InyFactoryRegistration<>(identifier, resultType, factory));
+        return registerFactory(owner, new InyFactoryRegistration<>(identifier, resultType, factory));
     }
 
-    /** Registers a factory using its canonical {@code namespace:name} identifier. */
+    /** Registers a plugin-owned factory using its canonical {@code namespace:name} identifier. */
     public <T> MinecraftInyRegistry registerFactory(
+            Plugin owner,
             String identifier,
             Class<T> resultType,
             InyFactory<T> factory
     ) {
-        return registerFactory(InyIdentifier.parse(identifier), resultType, factory);
+        return registerFactory(owner, InyIdentifier.parse(identifier), resultType, factory);
     }
 
-    /** Registers an advanced registration, rejecting duplicate identifiers. */
-    public synchronized MinecraftInyRegistry registerFactory(InyFactoryRegistration<?> registration) {
+    /** Registers an advanced plugin-owned registration, rejecting duplicate identifiers. */
+    public synchronized MinecraftInyRegistry registerFactory(
+            Plugin owner,
+            InyFactoryRegistration<?> registration
+    ) {
         ensureActive();
         ensureRegistrationOpen();
+        Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(registration, "registration");
-        if (registrations.putIfAbsent(registration.identifier(), registration) != null) {
+        OwnedFactoryRegistration ownedRegistration = new OwnedFactoryRegistration(owner, registration);
+        if (registrations.putIfAbsent(registration.identifier(), ownedRegistration) != null) {
             throw new InyDuplicateFactoryException(registration.identifier());
         }
         publishSnapshot();
         return this;
     }
 
-    /** Deliberately replaces an existing factory in the shared registry. */
+    /** Deliberately replaces an existing factory and transfers ownership to the supplied plugin. */
     public synchronized <T> MinecraftInyRegistry replaceFactory(
+            Plugin owner,
             InyIdentifier identifier,
             Class<T> resultType,
             InyFactory<T> factory
     ) {
         ensureActive();
         ensureRegistrationOpen();
+        Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(identifier, "identifier");
         if (!registrations.containsKey(identifier)) {
             throw new IllegalArgumentException("No INY factory is registered for " + identifier);
         }
-        registrations.put(identifier, new InyFactoryRegistration<>(identifier, resultType, factory));
+        registrations.put(identifier, new OwnedFactoryRegistration(owner,
+                new InyFactoryRegistration<>(identifier, resultType, factory)));
         publishSnapshot();
         return this;
     }
 
     /** Deliberately replaces an existing factory using a canonical identifier string. */
     public <T> MinecraftInyRegistry replaceFactory(
+            Plugin owner,
             String identifier,
             Class<T> resultType,
             InyFactory<T> factory
     ) {
-        return replaceFactory(InyIdentifier.parse(identifier), resultType, factory);
+        return replaceFactory(owner, InyIdentifier.parse(identifier), resultType, factory);
     }
 
     /** Parses through the shared server service. */
@@ -207,15 +220,25 @@ final class MinecraftInyRegistry {
         return true;
     }
 
-    /** Resolves blockers owned by a plugin that Bukkit has disabled. */
-    void handlePluginDisable(Plugin disabledPlugin) {
-        if (active) {
-            readiness.handlePluginDisable(disabledPlugin);
+    /** Removes factories and resolves readiness blockers owned by a disabled plugin. */
+    synchronized void handlePluginDisable(Plugin disabledPlugin) {
+        Objects.requireNonNull(disabledPlugin, "disabledPlugin");
+        if (!active) {
+            return;
         }
+        boolean removed = registrations.entrySet().removeIf(entry ->
+                entry.getValue().owner() == disabledPlugin);
+        if (removed) {
+            publishSnapshot();
+        }
+        readiness.handlePluginDisable(disabledPlugin);
     }
 
     private void publishSnapshot() {
-        factorySnapshot.set(new InyFactoryRegistry(registrations));
+        Map<InyIdentifier, InyFactoryRegistration<?>> snapshot = new LinkedHashMap<>();
+        registrations.forEach((identifier, ownedRegistration) ->
+                snapshot.put(identifier, ownedRegistration.registration()));
+        factorySnapshot.set(new InyFactoryRegistry(snapshot));
     }
 
     private InyFactoryRegistry activeFactorySnapshot() {
@@ -261,5 +284,15 @@ final class MinecraftInyRegistry {
                     + resourcePath);
         }
         return path;
+    }
+
+    private record OwnedFactoryRegistration(
+            Plugin owner,
+            InyFactoryRegistration<?> registration
+    ) {
+        private OwnedFactoryRegistration {
+            Objects.requireNonNull(owner, "owner");
+            Objects.requireNonNull(registration, "registration");
+        }
     }
 }

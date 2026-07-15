@@ -1,7 +1,9 @@
 package net.iridiummc.iny;
 
 import net.iridiummc.iny.api.InyConfig;
+import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.exception.InyDuplicateFactoryException;
+import net.iridiummc.iny.exception.InyUnknownFactoryException;
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
@@ -38,8 +40,9 @@ class MinecraftGlobalRegistryTest {
     @Test
     void dependentPluginsCanRegisterFactoriesInTheSharedRegistry() {
         MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
 
-        registry.registerFactory("external:named", CustomNamedValue.class, context -> {
+        registry.registerFactory(provider, "external:named", CustomNamedValue.class, context -> {
             context.arguments().requireCount(1);
             return new CustomNamedValue(context.arguments().get(0, String.class));
         });
@@ -55,9 +58,11 @@ class MinecraftGlobalRegistryTest {
     @Test
     void independentProvidersCompleteRegistrationBeforeTheReadyBarrier() {
         MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
-        registry.registerFactory("first:available", CustomNamedValue.class,
+        Plugin firstProvider = plugin();
+        Plugin secondProvider = plugin();
+        registry.registerFactory(firstProvider, "first:available", CustomNamedValue.class,
                 context -> new CustomNamedValue("first"));
-        registry.registerFactory("second:available", CustomNamedValue.class,
+        registry.registerFactory(secondProvider, "second:available", CustomNamedValue.class,
                 context -> new CustomNamedValue("second"));
         registry.sealFactories();
 
@@ -73,10 +78,11 @@ class MinecraftGlobalRegistryTest {
     @Test
     void duplicatesRemainRejectedAndSnapshotsRemainImmutable() {
         MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
-        registry.registerFactory("external:value", String.class, context -> "one");
+        Plugin provider = plugin();
+        registry.registerFactory(provider, "external:value", String.class, context -> "one");
 
         assertThrows(InyDuplicateFactoryException.class,
-                () -> registry.registerFactory("external:value", String.class, context -> "two"));
+                () -> registry.registerFactory(provider, "external:value", String.class, context -> "two"));
         registry.sealFactories();
         assertThrows(UnsupportedOperationException.class,
                 () -> registry.factories().registrations().clear());
@@ -85,26 +91,28 @@ class MinecraftGlobalRegistryTest {
     @Test
     void readinessBarrierRejectsEarlyConsumptionAndLateRegistration() {
         MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
 
         assertThrows(IllegalStateException.class, registry::iny);
         assertThrows(IllegalStateException.class, registry::factories);
         assertThrows(IllegalStateException.class, () -> registry.parse("value: ready\n"));
         assertThrows(IllegalStateException.class, () -> registry.loadConfig(registry.plugin()));
 
-        registry.registerFactory("external:value", String.class, context -> "ready");
+        registry.registerFactory(provider, "external:value", String.class, context -> "ready");
         registry.sealFactories();
 
         assertEquals("ready", registry.parse("value: external:value()\n")
                 .get("value", String.class));
         assertThrows(IllegalStateException.class,
-                () -> registry.registerFactory("external:late", String.class, context -> "late"));
+                () -> registry.registerFactory(provider, "external:late", String.class, context -> "late"));
         assertThrows(IllegalStateException.class,
-                () -> registry.replaceFactory("external:value", String.class, context -> "late"));
+                () -> registry.replaceFactory(provider, "external:value", String.class, context -> "late"));
     }
 
     @Test
     void closingThePluginRegistryInvalidatesCachedServices() {
         MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
         registry.sealFactories();
         InyConfig cachedConfig = registry.parse("value: minecraft:material(\"diamond\")\n");
 
@@ -114,7 +122,47 @@ class MinecraftGlobalRegistryTest {
         assertThrows(IllegalStateException.class,
                 () -> cachedConfig.get("value", org.bukkit.Material.class));
         assertThrows(IllegalStateException.class,
-                () -> registry.registerFactory("external:value", String.class, context -> "late"));
+                () -> registry.registerFactory(provider, "external:value", String.class, context -> "late"));
+    }
+
+    @Test
+    void disablingAProviderRemovesOnlyItsFactoriesFromLiveSnapshots() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin disabledProvider = plugin();
+        Plugin activeProvider = plugin();
+        registry.registerFactory(disabledProvider, "disabled:value", String.class, context -> "disabled");
+        registry.registerFactory(activeProvider, "active:value", String.class, context -> "active");
+        registry.sealFactories();
+        InyConfig config = registry.parse("""
+                disabled: disabled:value()
+                active: active:value()
+                """);
+
+        registry.handlePluginDisable(disabledProvider);
+
+        assertThrows(InyUnknownFactoryException.class,
+                () -> config.get("disabled", String.class));
+        assertEquals("active", config.get("active", String.class));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("disabled:value")));
+        assertTrue(registry.factories().contains(InyIdentifier.parse("active:value")));
+        assertTrue(registry.factories().contains(InyIdentifier.parse("minecraft:material")));
+    }
+
+    @Test
+    void replacementTransfersFactoryOwnershipToTheReplacingProvider() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin originalProvider = plugin();
+        Plugin replacementProvider = plugin();
+        registry.registerFactory(originalProvider, "external:value", String.class, context -> "original");
+        registry.replaceFactory(replacementProvider, "external:value", String.class, context -> "replacement");
+        registry.sealFactories();
+
+        registry.handlePluginDisable(originalProvider);
+        assertEquals("replacement", registry.parse("value: external:value()\n").get("value", String.class));
+
+        registry.handlePluginDisable(replacementProvider);
+        assertThrows(InyUnknownFactoryException.class,
+                () -> registry.parse("value: external:value()\n").get("value", String.class));
     }
 
     @Test

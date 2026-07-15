@@ -4,7 +4,10 @@ import net.iridiummc.iny.api.InyIdentifier;
 
 import java.util.Objects;
 
-/** Immutable association between a namespaced identifier, declared type, and factory. */
+/**
+ * Immutable association between a namespaced identifier, declared type, and factory.
+ * Lifecycle ownership is adapter-specific and is tracked separately by the shared Bukkit registry.
+ */
 public record InyFactoryRegistration<T>(
         InyIdentifier identifier,
         Class<T> resultType,

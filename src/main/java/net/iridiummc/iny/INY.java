@@ -96,15 +96,16 @@ public final class INY extends JavaPlugin implements Listener {
     }
 
     /**
-     * Registers a factory in the shared server registry.
+     * Registers a factory owned by the providing plugin in the shared server registry.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
      */
     public <T> INY registerFactory(
+            Plugin owner,
             InyIdentifier identifier,
             Class<T> resultType,
             InyFactory<T> factory
     ) {
-        registry().registerFactory(identifier, resultType, factory);
+        registry().registerFactory(owner, identifier, resultType, factory);
         return this;
     }
 
@@ -112,8 +113,13 @@ public final class INY extends JavaPlugin implements Listener {
      * Registers a factory under a canonical {@code namespace:name} identifier.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
      */
-    public <T> INY registerFactory(String identifier, Class<T> resultType, InyFactory<T> factory) {
-        registry().registerFactory(identifier, resultType, factory);
+    public <T> INY registerFactory(
+            Plugin owner,
+            String identifier,
+            Class<T> resultType,
+            InyFactory<T> factory
+    ) {
+        registry().registerFactory(owner, identifier, resultType, factory);
         return this;
     }
 
@@ -121,24 +127,30 @@ public final class INY extends JavaPlugin implements Listener {
      * Registers an advanced immutable factory registration.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
      */
-    public INY registerFactory(InyFactoryRegistration<?> registration) {
-        registry().registerFactory(registration);
+    public INY registerFactory(Plugin owner, InyFactoryRegistration<?> registration) {
+        registry().registerFactory(owner, registration);
         return this;
     }
 
-    /** Explicitly replaces an existing factory while startup registration remains open. */
+    /** Replaces a factory and transfers its ownership while startup registration remains open. */
     public <T> INY replaceFactory(
+            Plugin owner,
             InyIdentifier identifier,
             Class<T> resultType,
             InyFactory<T> factory
     ) {
-        registry().replaceFactory(identifier, resultType, factory);
+        registry().replaceFactory(owner, identifier, resultType, factory);
         return this;
     }
 
-    /** Explicitly replaces an existing factory by canonical identifier while registration remains open. */
-    public <T> INY replaceFactory(String identifier, Class<T> resultType, InyFactory<T> factory) {
-        registry().replaceFactory(identifier, resultType, factory);
+    /** Replaces a factory by canonical identifier and transfers ownership while registration remains open. */
+    public <T> INY replaceFactory(
+            Plugin owner,
+            String identifier,
+            Class<T> resultType,
+            InyFactory<T> factory
+    ) {
+        registry().replaceFactory(owner, identifier, resultType, factory);
         return this;
     }
 
@@ -167,7 +179,7 @@ public final class INY extends JavaPlugin implements Listener {
         registry().sealFactories();
     }
 
-    /** Resolves blockers owned by integrations that Bukkit disables during startup. */
+    /** Removes factories and resolves blockers owned by plugins that Bukkit disables. */
     @EventHandler
     public void onPluginDisable(PluginDisableEvent event) {
         MinecraftInyRegistry registry = ownedRegistry;
