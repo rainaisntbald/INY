@@ -172,6 +172,7 @@ class InyFactoryTest {
                 () -> iny.parse("value: test:range(1, \"two\")\n").get("value", Range.class));
         assertEquals(1, type.argumentIndex());
         assertEquals(Integer.class, type.requestedType());
+        assertEquals("string", type.actualType());
         assertTrue(type.getCause() != null);
 
         InyFactoryArgumentException missing = assertThrows(InyFactoryArgumentException.class,
@@ -180,6 +181,7 @@ class InyFactoryTest {
                                 context -> context.arguments().get(5, String.class))
                         .build().parse("value: test:get()\n").get("value", String.class));
         assertEquals(5, missing.argumentIndex());
+        assertEquals("missing", missing.actualType());
     }
 
     @Test

@@ -1,7 +1,5 @@
 package net.iridiummc.iny.internal.value;
 
-import net.iridiummc.iny.value.InyValueType;
-
 import java.math.BigInteger;
 import java.util.Objects;
 
@@ -17,7 +15,7 @@ public record InyInteger(BigInteger value) implements InyValue {
     }
 
     @Override
-    public InyValueType type() {
-        return InyValueType.INTEGER;
+    public String actualType() {
+        return InyValueType.INTEGER.displayName();
     }
 }

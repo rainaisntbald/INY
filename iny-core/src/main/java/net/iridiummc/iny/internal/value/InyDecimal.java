@@ -1,7 +1,5 @@
 package net.iridiummc.iny.internal.value;
 
-import net.iridiummc.iny.value.InyValueType;
-
 import java.math.BigDecimal;
 import java.util.Objects;
 
@@ -14,7 +12,7 @@ public record InyDecimal(BigDecimal value) implements InyValue {
     }
 
     @Override
-    public InyValueType type() {
-        return InyValueType.DECIMAL;
+    public String actualType() {
+        return InyValueType.DECIMAL.displayName();
     }
 }

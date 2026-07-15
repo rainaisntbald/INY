@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -45,6 +46,38 @@ class InyConfigTest {
         assertFalse(config.contains("outer.inner.absent"));
         assertInstanceOf(InySection.class, config.getValue("outer.inner"));
         assertEquals(1, config.getList("outer.values").size());
+    }
+
+    @Test
+    void configIsItsRootSectionAndSubsectionsSupportTypedRelativeNavigation() {
+        InyConfig config = iny.parse("""
+                server {
+                  host: "localhost"
+                  limits {
+                    players: 20
+                  }
+                  ports:
+                    - 25565
+                    - 25566
+                }
+                """);
+
+        assertSame(config, config.root());
+        assertInstanceOf(InySection.class, config);
+        assertEquals("localhost", config.get("server.host", String.class));
+
+        InySection server = config.getSection("server");
+        assertEquals("localhost", server.get("host", String.class));
+        assertEquals(20, server.get("limits.players", Integer.class));
+        assertEquals(20, server.getSection("limits").get("players", Integer.class));
+        assertEquals(List.of(25565, 25566), server.getList("ports", Integer.class));
+        assertEquals(Optional.of(20), server.find("limits.players", Integer.class));
+        assertTrue(server.contains("limits.players"));
+        assertFalse(server.contains("limits.absent"));
+
+        InyMissingValueException missing = assertThrows(
+                InyMissingValueException.class, () -> server.get("limits.absent", Object.class));
+        assertEquals("server.limits.absent", missing.path());
     }
 
     @Test
@@ -124,6 +157,7 @@ class InyConfigTest {
         InyPathTraversalException exception = assertThrows(InyPathTraversalException.class,
                 () -> config.findValue("outer.child"));
         assertEquals("outer", exception.segment());
+        assertEquals("integer", exception.actualType());
     }
 
     @Test
@@ -166,6 +200,7 @@ class InyConfigTest {
                 () -> config.get("text", Integer.class));
         assertEquals("text", wrongType.path());
         assertEquals(Integer.class, wrongType.targetType());
+        assertEquals(String.class.getTypeName(), wrongType.actualType());
 
         assertThrows(InyDecodeException.class, () -> config.get("huge", Integer.class));
         assertEquals(9_000_000_000L, config.get("huge", Long.class));

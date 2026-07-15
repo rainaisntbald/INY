@@ -1,7 +1,5 @@
 package net.iridiummc.iny.exception;
 
-import net.iridiummc.iny.value.InyValueType;
-
 import java.util.Objects;
 
 /** Raised when an existing INY value cannot be converted to the requested Java type. */
@@ -9,9 +7,9 @@ public final class InyDecodeException extends InyException {
 
     private final String path;
     private final Class<?> targetType;
-    private final InyValueType actualType;
+    private final String actualType;
 
-    public InyDecodeException(String path, Class<?> targetType, InyValueType actualType, String explanation) {
+    public InyDecodeException(String path, Class<?> targetType, String actualType, String explanation) {
         super("Cannot decode INY value at path '" + path + "' as " + targetType.getTypeName()
                 + ": actual type is " + actualType + "; " + explanation);
         this.path = Objects.requireNonNull(path, "path");
@@ -22,7 +20,7 @@ public final class InyDecodeException extends InyException {
     public InyDecodeException(
             String path,
             Class<?> targetType,
-            InyValueType actualType,
+            String actualType,
             String explanation,
             Throwable cause
     ) {
@@ -41,7 +39,7 @@ public final class InyDecodeException extends InyException {
         return targetType;
     }
 
-    public InyValueType actualType() {
+    public String actualType() {
         return actualType;
     }
 }

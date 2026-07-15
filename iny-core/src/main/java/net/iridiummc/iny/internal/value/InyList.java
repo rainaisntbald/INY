@@ -1,7 +1,5 @@
 package net.iridiummc.iny.internal.value;
 
-import net.iridiummc.iny.value.InyValueType;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -14,7 +12,7 @@ public record InyList(List<InyValue> values) implements InyValue {
     }
 
     @Override
-    public InyValueType type() {
-        return InyValueType.LIST;
+    public String actualType() {
+        return InyValueType.LIST.displayName();
     }
 }

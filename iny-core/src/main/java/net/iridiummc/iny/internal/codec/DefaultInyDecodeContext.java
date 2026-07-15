@@ -3,7 +3,6 @@ package net.iridiummc.iny.internal.codec;
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.codec.InyDecodeContext;
 import net.iridiummc.iny.exception.InyDecodeException;
-import net.iridiummc.iny.value.InyValueType;
 
 import java.util.Objects;
 
@@ -14,14 +13,14 @@ public final class DefaultInyDecodeContext implements InyDecodeContext {
     private final InyValueAccess values;
     private final String path;
     private final Class<?> requestedType;
-    private final InyValueType actualType;
+    private final String actualType;
 
     public DefaultInyDecodeContext(
             Iny service,
             InyValueAccess values,
             String path,
             Class<?> requestedType,
-            InyValueType actualType
+            String actualType
     ) {
         this.service = Objects.requireNonNull(service, "service");
         this.values = Objects.requireNonNull(values, "values");

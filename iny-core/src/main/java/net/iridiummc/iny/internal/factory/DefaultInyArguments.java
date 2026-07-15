@@ -44,7 +44,7 @@ final class DefaultInyArguments implements InyArguments {
                     context.identifier(),
                     index,
                     type,
-                    value.type(),
+                    value.actualType(),
                     "argument resolution failed: " + describe(exception),
                     exception);
         }
@@ -93,7 +93,7 @@ final class DefaultInyArguments implements InyArguments {
                 context.identifier(),
                 index,
                 requestedType,
-                null,
+                "missing",
                 "argument index is outside the available range 0 to " + Math.max(-1, values.size() - 1),
                 null);
     }

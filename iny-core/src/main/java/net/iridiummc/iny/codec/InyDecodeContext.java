@@ -21,7 +21,7 @@ public interface InyDecodeContext {
     /** Decodes a named child while extending this context's dotted path. */
     <T> T decodeChild(String childName, Object childValue, Class<T> type);
 
-    /** Creates a decoding failure populated with the current path, target, and value kind. */
+    /** Creates a decoding failure populated with the current path, target, and Java-side value type. */
     InyDecodeException failure(String explanation);
 
     /** Creates a decoding failure populated with current context and a cause. */

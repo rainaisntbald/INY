@@ -9,7 +9,7 @@ import java.util.Optional;
  * A parsed immutable INY configuration with dotted navigation and typed decoding.
  * Instances are created by {@link Iny}; consumers should depend only on this interface.
  */
-public interface InyConfig {
+public interface InyConfig extends InySection {
 
     /** Returns the immutable root section. */
     InySection root();

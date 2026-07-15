@@ -1,7 +1,5 @@
 package net.iridiummc.iny.internal.value;
 
-import net.iridiummc.iny.value.InyValueType;
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -20,7 +18,7 @@ public record InySectionValue(Map<String, InyValue> entries) implements InyValue
     }
 
     @Override
-    public InyValueType type() {
-        return InyValueType.SECTION;
+    public String actualType() {
+        return InyValueType.SECTION.displayName();
     }
 }

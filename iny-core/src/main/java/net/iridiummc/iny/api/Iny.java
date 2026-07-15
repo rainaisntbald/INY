@@ -32,11 +32,8 @@ import net.iridiummc.iny.internal.value.InyString;
 import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyValueType;
 
 import java.io.Reader;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -181,14 +178,15 @@ public final class Iny {
         if (value instanceof InyValue internalValue) {
             return decodeInternalValue(internalValue, type, path);
         }
-        return decodeJavaValue(value, type, path, typeOf(value));
+        return decodeJavaValue(value, type, path, describeJavaType(value));
     }
 
     private <T> T decodeInternalValue(InyValue value, Class<T> type, String path) {
-        return decodeJavaValue(toJavaValue(value, path), type, path, value.type());
+        Object javaValue = toJavaValue(value, path);
+        return decodeJavaValue(javaValue, type, path, describeJavaType(javaValue));
     }
 
-    private <T> T decodeJavaValue(Object value, Class<T> type, String path, InyValueType actualType) {
+    private <T> T decodeJavaValue(Object value, Class<T> type, String path, String actualType) {
         InyDecoder<T> decoder = decoders.find(type)
                 .orElseGet(() -> directDecoder(value, type, path));
         InyDecodeContext context = new DefaultInyDecodeContext(this, values, path, type, actualType);
@@ -250,15 +248,11 @@ public final class Iny {
         throw new AssertionError("Unknown internal INY value " + value.getClass().getTypeName());
     }
 
-    private static InyValueType typeOf(Object value) {
-        if (value == null) return InyValueType.NULL;
-        if (value instanceof InySection) return InyValueType.SECTION;
-        if (value instanceof List<?>) return InyValueType.LIST;
-        if (value instanceof String) return InyValueType.STRING;
-        if (value instanceof BigInteger) return InyValueType.INTEGER;
-        if (value instanceof BigDecimal) return InyValueType.DECIMAL;
-        if (value instanceof Boolean) return InyValueType.BOOLEAN;
-        return InyValueType.CALL;
+    private static String describeJavaType(Object value) {
+        if (value == null) return "null";
+        if (value instanceof InySection) return "section";
+        if (value instanceof List<?>) return "list";
+        return value.getClass().getTypeName();
     }
 
     private static Class<?> boxed(Class<?> type) {

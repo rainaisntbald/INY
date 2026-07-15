@@ -2,7 +2,6 @@ package net.iridiummc.iny.internal.value;
 
 import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.source.SourcePosition;
-import net.iridiummc.iny.value.InyValueType;
 
 import java.util.List;
 import java.util.Objects;
@@ -38,8 +37,8 @@ public final class InyCall implements InyValue {
     }
 
     @Override
-    public InyValueType type() {
-        return InyValueType.CALL;
+    public String actualType() {
+        return InyValueType.CALL.displayName();
     }
 
     @Override

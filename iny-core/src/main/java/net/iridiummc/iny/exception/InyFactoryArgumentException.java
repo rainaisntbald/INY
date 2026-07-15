@@ -1,7 +1,6 @@
 package net.iridiummc.iny.exception;
 
 import net.iridiummc.iny.api.InyIdentifier;
-import net.iridiummc.iny.value.InyValueType;
 
 import java.util.Objects;
 
@@ -10,24 +9,24 @@ public final class InyFactoryArgumentException extends InyFactoryException {
 
     private final int argumentIndex;
     private final Class<?> requestedType;
-    private final InyValueType actualValueType;
+    private final String actualType;
 
     public InyFactoryArgumentException(
             String path,
             InyIdentifier identifier,
             int argumentIndex,
             Class<?> requestedType,
-            InyValueType actualValueType,
+            String actualType,
             String explanation,
             Throwable cause
     ) {
         super("Invalid argument " + argumentIndex + " for " + identifier + " at path '" + path
-                + "': requested " + requestedType.getTypeName() + "; actual INY type is "
-                + (actualValueType == null ? "missing" : actualValueType) + "; " + explanation,
+                + "': requested " + requestedType.getTypeName() + "; actual type is "
+                + actualType + "; " + explanation,
                 path, identifier, cause);
         this.argumentIndex = argumentIndex;
         this.requestedType = Objects.requireNonNull(requestedType, "requestedType");
-        this.actualValueType = actualValueType;
+        this.actualType = Objects.requireNonNull(actualType, "actualType");
     }
 
     public int argumentIndex() {
@@ -38,7 +37,7 @@ public final class InyFactoryArgumentException extends InyFactoryException {
         return requestedType;
     }
 
-    public InyValueType actualValueType() {
-        return actualValueType;
+    public String actualType() {
+        return actualType;
     }
 }

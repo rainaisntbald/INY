@@ -3,6 +3,7 @@ package net.iridiummc.iny;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 class CoreArchitectureTest {
 
@@ -19,7 +21,10 @@ class CoreArchitectureTest {
         var config = net.iridiummc.iny.api.Iny.builder().build().parse("value: 1");
 
         assertTrue(net.iridiummc.iny.api.InyConfig.class.isInterface());
+        assertTrue(net.iridiummc.iny.value.InySection.class.isAssignableFrom(
+                net.iridiummc.iny.api.InyConfig.class));
         assertTrue(config.getClass().getPackageName().startsWith("net.iridiummc.iny.internal."));
+        assertSame(config, config.root());
     }
 
     @Test
@@ -37,6 +42,21 @@ class CoreArchitectureTest {
                 () -> Class.forName("net.iridiummc.iny.value.InyValue"));
         assertThrows(ClassNotFoundException.class,
                 () -> Class.forName("net.iridiummc.iny.value.InyList"));
+        assertThrows(ClassNotFoundException.class,
+                () -> Class.forName("net.iridiummc.iny.value.InyValueType"));
+
+        Class<?> internalValueType = Class.forName(
+                "net.iridiummc.iny.internal.value.InyValueType");
+        assertFalse(Modifier.isPublic(internalValueType.getModifiers()));
+        assertEquals(String.class,
+                net.iridiummc.iny.exception.InyDecodeException.class
+                        .getMethod("actualType").getReturnType());
+        assertEquals(String.class,
+                net.iridiummc.iny.exception.InyPathTraversalException.class
+                        .getMethod("actualType").getReturnType());
+        assertEquals(String.class,
+                net.iridiummc.iny.exception.InyFactoryArgumentException.class
+                        .getMethod("actualType").getReturnType());
         assertThrows(NoSuchMethodException.class,
                 () -> net.iridiummc.iny.api.Iny.class.getMethod(
                         "resolveValue", Object.class, Class.class, String.class));
