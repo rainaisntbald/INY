@@ -7,6 +7,11 @@ import java.util.Objects;
 /**
  * Immutable association between a namespaced identifier, declared type, and factory.
  * Lifecycle ownership is adapter-specific and is tracked separately by the shared Bukkit registry.
+ *
+ * @param <T> object type produced by the factory
+ * @param identifier namespaced identifier used by INY calls
+ * @param resultType declared result type
+ * @param factory factory implementation
  */
 public record InyFactoryRegistration<T>(
         InyIdentifier identifier,
@@ -14,6 +19,7 @@ public record InyFactoryRegistration<T>(
         InyFactory<T> factory
 ) {
 
+    /** Validates and creates an immutable factory registration. */
     public InyFactoryRegistration {
         Objects.requireNonNull(identifier, "identifier");
         Objects.requireNonNull(resultType, "resultType");

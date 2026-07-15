@@ -29,7 +29,15 @@ public final class INY extends JavaPlugin implements Listener {
     private MinecraftInyRegistry ownedRegistry;
     private volatile InyReadyEvent readyEvent;
 
-    /** Returns the active INY plugin instance. */
+    /** Creates the Bukkit-managed plugin entry point. */
+    public INY() {
+    }
+
+    /**
+     * Returns the active INY plugin instance.
+     *
+     * @return the active plugin instance
+     */
     public static INY getInstance() {
         INY current = instance;
         if (current == null) {
@@ -38,12 +46,20 @@ public final class INY extends JavaPlugin implements Listener {
         return current;
     }
 
-    /** Returns whether startup registration has ended and configuration may be consumed. */
+    /**
+     * Returns whether startup registration has ended and configuration may be consumed.
+     *
+     * @return {@code true} when the shared service is ready
+     */
     public boolean isReady() {
         return registry().isReady();
     }
 
-    /** Returns the startup readiness barrier used by external integrations. */
+    /**
+     * Returns the startup readiness barrier used by external integrations.
+     *
+     * @return the shared readiness barrier
+     */
     public Readiness readiness() {
         return registry().readiness();
     }
@@ -77,6 +93,9 @@ public final class INY extends JavaPlugin implements Listener {
     /**
      * Loads {@code config.iny} from a dependent plugin's data folder.
      * If it does not exist yet, the plugin's bundled {@code config.iny} resource is copied first.
+     *
+     * @param plugin plugin whose configuration should be loaded
+     * @return the parsed immutable configuration
      */
     public InyConfig loadConfig(Plugin plugin) {
         return registry().loadConfig(plugin);
@@ -85,12 +104,21 @@ public final class INY extends JavaPlugin implements Listener {
     /**
      * Loads a plugin-relative INY file, copying the same bundled resource on first use.
      * The resource path must remain inside the dependent plugin's data folder.
+     *
+     * @param plugin plugin whose configuration should be loaded
+     * @param resourcePath plugin-relative resource and destination path
+     * @return the parsed immutable configuration
      */
     public InyConfig loadConfig(Plugin plugin, String resourcePath) {
         return registry().loadConfig(plugin, resourcePath);
     }
 
-    /** Loads an existing UTF-8 INY file after {@link InyReadyEvent} through the shared service. */
+    /**
+     * Loads an existing UTF-8 INY file after {@link InyReadyEvent} through the shared service.
+     *
+     * @param path file to load
+     * @return the parsed immutable configuration
+     */
     public InyConfig load(Path path) {
         return registry().load(path);
     }
@@ -98,6 +126,13 @@ public final class INY extends JavaPlugin implements Listener {
     /**
      * Registers a factory owned by the providing plugin in the shared server registry.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
+     *
+     * @param owner plugin that owns the registration
+     * @param identifier namespaced factory identifier
+     * @param resultType declared factory result type
+     * @param factory factory implementation
+     * @param <T> factory result type
+     * @return this plugin facade
      */
     public <T> INY registerFactory(
             Plugin owner,
@@ -112,6 +147,13 @@ public final class INY extends JavaPlugin implements Listener {
     /**
      * Registers a factory under a canonical {@code namespace:name} identifier.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
+     *
+     * @param owner plugin that owns the registration
+     * @param identifier canonical factory identifier
+     * @param resultType declared factory result type
+     * @param factory factory implementation
+     * @param <T> factory result type
+     * @return this plugin facade
      */
     public <T> INY registerFactory(
             Plugin owner,
@@ -126,13 +168,26 @@ public final class INY extends JavaPlugin implements Listener {
     /**
      * Registers an advanced immutable factory registration.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
+     *
+     * @param owner plugin that owns the registration
+     * @param registration registration to add
+     * @return this plugin facade
      */
     public INY registerFactory(Plugin owner, InyFactoryRegistration<?> registration) {
         registry().registerFactory(owner, registration);
         return this;
     }
 
-    /** Replaces a factory and transfers its ownership while startup registration remains open. */
+    /**
+     * Replaces a factory and transfers its ownership while startup registration remains open.
+     *
+     * @param owner plugin that will own the replacement
+     * @param identifier identifier of the registration to replace
+     * @param resultType declared replacement result type
+     * @param factory replacement factory
+     * @param <T> factory result type
+     * @return this plugin facade
+     */
     public <T> INY replaceFactory(
             Plugin owner,
             InyIdentifier identifier,
@@ -143,7 +198,16 @@ public final class INY extends JavaPlugin implements Listener {
         return this;
     }
 
-    /** Replaces a factory by canonical identifier and transfers ownership while registration remains open. */
+    /**
+     * Replaces a factory by canonical identifier and transfers ownership while registration remains open.
+     *
+     * @param owner plugin that will own the replacement
+     * @param identifier canonical identifier of the registration to replace
+     * @param resultType declared replacement result type
+     * @param factory replacement factory
+     * @param <T> factory result type
+     * @return this plugin facade
+     */
     public <T> INY replaceFactory(
             Plugin owner,
             String identifier,
@@ -154,7 +218,11 @@ public final class INY extends JavaPlugin implements Listener {
         return this;
     }
 
-    /** Returns the sealed immutable factory snapshot after {@link InyReadyEvent}. */
+    /**
+     * Returns the sealed immutable factory snapshot after {@link InyReadyEvent}.
+     *
+     * @return the shared factory registry snapshot
+     */
     public InyFactoryRegistry factories() {
         return registry().factories();
     }
@@ -170,7 +238,11 @@ public final class INY extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
-    /** Ends registration after server startup and announces that configuration consumption is safe. */
+    /**
+     * Ends registration after server startup and announces that configuration consumption is safe.
+     *
+     * @param event Bukkit server-load event
+     */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onServerLoad(ServerLoadEvent event) {
         if (event.getType() != ServerLoadEvent.LoadType.STARTUP) {
@@ -179,7 +251,11 @@ public final class INY extends JavaPlugin implements Listener {
         registry().sealFactories();
     }
 
-    /** Removes factories and resolves blockers owned by plugins that Bukkit disables. */
+    /**
+     * Removes factories and resolves blockers owned by plugins that Bukkit disables.
+     *
+     * @param event Bukkit plugin-disable event
+     */
     @EventHandler
     public void onPluginDisable(PluginDisableEvent event) {
         MinecraftInyRegistry registry = ownedRegistry;

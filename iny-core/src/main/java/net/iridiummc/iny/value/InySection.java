@@ -20,15 +20,31 @@ import java.util.Optional;
  */
 public interface InySection {
 
-    /** Returns an immutable insertion-ordered view of this section's entries. */
+    /**
+     * Returns an immutable insertion-ordered view of this section's entries.
+     *
+     * @return immutable entries keyed by their local names
+     */
     Map<String, Object> entries();
 
-    /** Returns a required relative dotted path as its ordinary Java representation. */
+    /**
+     * Returns a required relative dotted path as its ordinary Java representation.
+     *
+     * @param path dotted path relative to this section
+     * @return the resolved Java value
+     */
     default Object get(String path) {
         return resolve(this, path, true, null);
     }
 
-    /** Returns and decodes a required relative dotted path. */
+    /**
+     * Returns and decodes a required relative dotted path.
+     *
+     * @param path dotted path relative to this section
+     * @param type requested Java type
+     * @param <T> requested Java type
+     * @return the decoded value
+     */
     default <T> T get(String path, Class<T> type) {
         Objects.requireNonNull(type, "type");
         Object value = get(path);
@@ -50,6 +66,9 @@ public interface InySection {
     /**
      * Returns a relative dotted path when present and non-null.
      * Use {@link #contains(String)} when an explicit null must be distinguished from a missing path.
+     *
+     * @param path dotted path relative to this section
+     * @return the resolved Java value, or empty when missing or explicitly null
      */
     default Optional<Object> find(String path) {
         Object missing = new Object();
@@ -57,24 +76,46 @@ public interface InySection {
         return value == missing ? Optional.empty() : Optional.ofNullable(value);
     }
 
-    /** Returns and decodes a relative dotted path, or empty when missing or explicitly null. */
+    /**
+     * Returns and decodes a relative dotted path, or empty when missing or explicitly null.
+     *
+     * @param path dotted path relative to this section
+     * @param type requested Java type
+     * @param <T> requested Java type
+     * @return the decoded value, or empty when missing or explicitly null
+     */
     default <T> Optional<T> find(String path, Class<T> type) {
         Objects.requireNonNull(type, "type");
         return find(path).map(value -> cast(path, value, type));
     }
 
-    /** Tests whether a valid relative dotted path exists, including paths whose value is null. */
+    /**
+     * Tests whether a valid relative dotted path exists, including paths whose value is null.
+     *
+     * @param path dotted path relative to this section
+     * @return {@code true} when the path exists
+     */
     default boolean contains(String path) {
         Object missing = new Object();
         return resolve(this, path, false, missing) != missing;
     }
 
-    /** Returns a required nested section at a relative dotted path. */
+    /**
+     * Returns a required nested section at a relative dotted path.
+     *
+     * @param path dotted path relative to this section
+     * @return the nested section
+     */
     default InySection getSection(String path) {
         return get(path, InySection.class);
     }
 
-    /** Returns a required immutable list of ordinary Java values at a relative dotted path. */
+    /**
+     * Returns a required immutable list of ordinary Java values at a relative dotted path.
+     *
+     * @param path dotted path relative to this section
+     * @return an immutable list of Java values
+     */
     default List<Object> getList(String path) {
         Object value = get(path);
         if (!(value instanceof List<?> list)) {
@@ -85,7 +126,14 @@ public interface InySection {
         return Collections.unmodifiableList(copy);
     }
 
-    /** Returns a required immutable list whose elements are decoded as the requested type. */
+    /**
+     * Returns a required immutable list whose elements are decoded as the requested type.
+     *
+     * @param path dotted path relative to this section
+     * @param type requested element type
+     * @param <T> requested element type
+     * @return an immutable list of decoded values
+     */
     default <T> List<T> getList(String path, Class<T> type) {
         Objects.requireNonNull(type, "type");
         List<Object> values = getList(path);

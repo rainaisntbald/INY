@@ -15,6 +15,7 @@ public record InyIdentifier(String namespace, String value) {
     private static final Pattern NAMESPACE = Pattern.compile("[a-z0-9][a-z0-9_.-]*");
     private static final Pattern VALUE = Pattern.compile("[a-z0-9][a-z0-9_./-]*");
 
+    /** Validates and creates a namespaced identifier. */
     public InyIdentifier {
         if (namespace == null || value == null) {
             throw new InyInvalidIdentifierException(String.valueOf(namespace) + ":" + value,
@@ -30,7 +31,12 @@ public record InyIdentifier(String namespace, String value) {
         }
     }
 
-    /** Parses the canonical {@code namespace:value} representation. */
+    /**
+     * Parses the canonical {@code namespace:value} representation.
+     *
+     * @param identifier canonical identifier text
+     * @return the parsed identifier
+     */
     public static InyIdentifier parse(String identifier) {
         if (identifier == null) {
             throw new InyInvalidIdentifierException("null", "identifier must not be null");

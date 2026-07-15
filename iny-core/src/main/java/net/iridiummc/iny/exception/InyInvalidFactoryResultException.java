@@ -7,10 +7,22 @@ import java.util.Objects;
 /** Raised when third-party factory output violates its registration contract. */
 public final class InyInvalidFactoryResultException extends InyFactoryException {
 
+    /** Java type requested by the caller. */
     private final Class<?> requestedType;
+    /** Result type declared by the factory registration. */
     private final Class<?> registeredResultType;
+    /** Actual factory result type, or null for a null result. */
     private final Class<?> actualResultType;
 
+    /**
+     * Creates a failure for a factory result that violates its registration contract.
+     *
+     * @param path configuration path containing the call
+     * @param identifier factory identifier
+     * @param requestedType requested Java type
+     * @param registeredResultType factory's declared result type
+     * @param actualResult value returned by the factory
+     */
     public InyInvalidFactoryResultException(
             String path,
             InyIdentifier identifier,
@@ -37,14 +49,29 @@ public final class InyInvalidFactoryResultException extends InyFactoryException 
                 + " while " + requestedType.getTypeName() + " was requested";
     }
 
+    /**
+     * Returns the type requested by the caller.
+     *
+     * @return requested Java type
+     */
     public Class<?> requestedType() {
         return requestedType;
     }
 
+    /**
+     * Returns the factory's declared result type.
+     *
+     * @return registered result type
+     */
     public Class<?> registeredResultType() {
         return registeredResultType;
     }
 
+    /**
+     * Returns the actual result type, when the factory did not return null.
+     *
+     * @return actual result type, or {@code null} for a null factory result
+     */
     public Class<?> actualResultType() {
         return actualResultType;
     }

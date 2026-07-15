@@ -11,7 +11,11 @@ import java.util.Optional;
  */
 public interface InyConfig extends InySection {
 
-    /** Returns the immutable root section. */
+    /**
+     * Returns the immutable root section.
+     *
+     * @return this configuration's root section
+     */
     InySection root();
 
     /** Returns and decodes a required dotted path. */
@@ -23,12 +27,20 @@ public interface InyConfig extends InySection {
     /** Tests whether a valid dotted path exists. */
     boolean contains(String path);
 
-    /** Returns a required dotted path as its ordinary Java representation. */
+    /**
+     * Returns a required dotted path as its ordinary Java representation.
+     *
+     * @param path dotted path relative to the configuration root
+     * @return the resolved Java value
+     */
     Object getValue(String path);
 
     /**
      * Returns a dotted path as its ordinary Java representation, or empty when missing or explicitly null.
      * Use {@link #contains(String)} to distinguish an explicit null from a missing path.
+     *
+     * @param path dotted path relative to the configuration root
+     * @return the resolved Java value, or empty when missing or explicitly null
      */
     Optional<Object> findValue(String path);
 

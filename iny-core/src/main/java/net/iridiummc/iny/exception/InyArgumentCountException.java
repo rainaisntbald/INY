@@ -5,10 +5,22 @@ import net.iridiummc.iny.api.InyIdentifier;
 /** Raised when a call supplies a factory with an unsupported number of arguments. */
 public final class InyArgumentCountException extends InyFactoryException {
 
+    /** Minimum accepted argument count. */
     private final int minimum;
+    /** Maximum accepted argument count. */
     private final int maximum;
+    /** Supplied argument count. */
     private final int actual;
 
+    /**
+     * Creates an argument-count failure.
+     *
+     * @param path configuration path containing the call
+     * @param identifier factory identifier
+     * @param minimum minimum accepted argument count
+     * @param maximum maximum accepted argument count
+     * @param actual supplied argument count
+     */
     public InyArgumentCountException(
             String path,
             InyIdentifier identifier,
@@ -27,14 +39,29 @@ public final class InyArgumentCountException extends InyFactoryException {
         return minimum == maximum ? Integer.toString(minimum) : minimum + " to " + maximum;
     }
 
+    /**
+     * Returns the minimum accepted argument count.
+     *
+     * @return the minimum accepted argument count
+     */
     public int minimum() {
         return minimum;
     }
 
+    /**
+     * Returns the maximum accepted argument count.
+     *
+     * @return the maximum accepted argument count
+     */
     public int maximum() {
         return maximum;
     }
 
+    /**
+     * Returns the supplied argument count.
+     *
+     * @return the supplied argument count
+     */
     public int actual() {
         return actual;
     }

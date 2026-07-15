@@ -75,49 +75,91 @@ public final class Iny {
     /**
      * Creates a low-level builder preloaded with all built-in decoders.
      * This is intended for standalone embedding and library tests; server integrations provide their own shared instance.
+     *
+     * @return a new service builder
      */
     public static Builder builder() {
         return new Builder();
     }
 
-    /** Parses string content using {@code <string>} as its diagnostic source name. */
+    /**
+     * Parses string content using {@code <string>} as its diagnostic source name.
+     *
+     * @param source source text to parse
+     * @return the parsed immutable configuration
+     */
     public InyConfig parse(String source) {
         return parse("<string>", source);
     }
 
-    /** Parses string content using the supplied diagnostic source name. */
+    /**
+     * Parses string content using the supplied diagnostic source name.
+     *
+     * @param sourceName source name used in diagnostics
+     * @param source source text to parse
+     * @return the parsed immutable configuration
+     */
     public InyConfig parse(String sourceName, String source) {
         return parse(new InySource(sourceName, source));
     }
 
-    /** Reads and parses a caller-owned reader using {@code <reader>} as its source name. */
+    /**
+     * Reads and parses a caller-owned reader using {@code <reader>} as its source name.
+     *
+     * @param reader reader to consume without closing
+     * @return the parsed immutable configuration
+     */
     public InyConfig parse(Reader reader) {
         return parse("<reader>", reader);
     }
 
-    /** Reads and parses a caller-owned reader without closing it. */
+    /**
+     * Reads and parses a caller-owned reader without closing it.
+     *
+     * @param sourceName source name used in diagnostics
+     * @param reader reader to consume without closing
+     * @return the parsed immutable configuration
+     */
     public InyConfig parse(String sourceName, Reader reader) {
         return parse(SourceLoading.read(sourceName, reader));
     }
 
-    /** Synchronously loads and parses a UTF-8 file. */
+    /**
+     * Synchronously loads and parses a UTF-8 file.
+     *
+     * @param path file to load
+     * @return the parsed immutable configuration
+     */
     public InyConfig load(Path path) {
         return parse(SourceLoading.load(path));
     }
 
-    /** Parses an already constructed named source. */
+    /**
+     * Parses an already constructed named source.
+     *
+     * @param source named source to parse
+     * @return the parsed immutable configuration
+     */
     public InyConfig parse(InySource source) {
         Objects.requireNonNull(source, "source");
         InySectionValue root = new Parser(source, new Lexer(source).lex()).parse();
         return InyConfigs.create(values, root);
     }
 
-    /** Returns the immutable decoder registry used by this service. */
+    /**
+     * Returns the immutable decoder registry used by this service.
+     *
+     * @return this service's decoder registry
+     */
     public InyDecoderRegistry decoders() {
         return decoders;
     }
 
-    /** Returns the immutable factory registry used by this service. */
+    /**
+     * Returns the immutable factory registry used by this service.
+     *
+     * @return the current factory registry snapshot
+     */
     public InyFactoryRegistry factories() {
         return Objects.requireNonNull(factories.get(), "factory registry source returned null");
     }
@@ -125,6 +167,9 @@ public final class Iny {
     /**
      * Creates a service sharing this service's decoders while obtaining factory snapshots from a caller-owned source.
      * This advanced hook supports lifecycle-scoped adapters; ordinary standalone services should use {@link #builder()}.
+     *
+     * @param factoryRegistrySource source of current immutable factory snapshots
+     * @return a service backed by the supplied factory registry source
      */
     public Iny withFactoryRegistry(Supplier<InyFactoryRegistry> factoryRegistrySource) {
         return new Iny(decoders, Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"));
@@ -278,7 +323,13 @@ public final class Iny {
             BuiltInDecoders.install(decoders);
         }
 
-        /** Registers a decoder, rejecting any decoder already registered for its exact target type. */
+        /**
+         * Registers a decoder, rejecting any decoder already registered for its exact target type.
+         *
+         * @param decoder decoder to register
+         * @param <T> decoder target type
+         * @return this builder
+         */
         public <T> Builder registerDecoder(InyDecoder<T> decoder) {
             Objects.requireNonNull(decoder, "decoder");
             Class<T> targetType = Objects.requireNonNull(decoder.targetType(), "decoder targetType");
@@ -288,7 +339,13 @@ public final class Iny {
             return this;
         }
 
-        /** Explicitly replaces an existing decoder; use this when overriding is intentional. */
+        /**
+         * Explicitly replaces an existing decoder; use this when overriding is intentional.
+         *
+         * @param decoder replacement decoder
+         * @param <T> decoder target type
+         * @return this builder
+         */
         public <T> Builder replaceDecoder(InyDecoder<T> decoder) {
             Objects.requireNonNull(decoder, "decoder");
             Class<T> targetType = Objects.requireNonNull(decoder.targetType(), "decoder targetType");
@@ -299,7 +356,15 @@ public final class Iny {
             return this;
         }
 
-        /** Registers a concise lambda factory under a parsed namespaced identifier. */
+        /**
+         * Registers a concise lambda factory under a parsed namespaced identifier.
+         *
+         * @param identifier namespaced factory identifier
+         * @param resultType declared factory result type
+         * @param factory factory implementation
+         * @param <T> factory result type
+         * @return this builder
+         */
         public <T> Builder registerFactory(
                 InyIdentifier identifier,
                 Class<T> resultType,
@@ -308,12 +373,25 @@ public final class Iny {
             return registerFactory(new InyFactoryRegistration<>(identifier, resultType, factory));
         }
 
-        /** Registers a concise lambda factory using a canonical {@code namespace:name} string. */
+        /**
+         * Registers a concise lambda factory using a canonical {@code namespace:name} string.
+         *
+         * @param identifier canonical factory identifier
+         * @param resultType declared factory result type
+         * @param factory factory implementation
+         * @param <T> factory result type
+         * @return this builder
+         */
         public <T> Builder registerFactory(String identifier, Class<T> resultType, InyFactory<T> factory) {
             return registerFactory(InyIdentifier.parse(identifier), resultType, factory);
         }
 
-        /** Registers an advanced immutable registration, rejecting duplicate identifiers. */
+        /**
+         * Registers an advanced immutable registration, rejecting duplicate identifiers.
+         *
+         * @param registration registration to add
+         * @return this builder
+         */
         public Builder registerFactory(InyFactoryRegistration<?> registration) {
             Objects.requireNonNull(registration, "registration");
             if (factories.putIfAbsent(registration.identifier(), registration) != null) {
@@ -322,7 +400,15 @@ public final class Iny {
             return this;
         }
 
-        /** Explicitly replaces an existing factory registration. */
+        /**
+         * Explicitly replaces an existing factory registration.
+         *
+         * @param identifier identifier of the registration to replace
+         * @param resultType declared replacement result type
+         * @param factory replacement factory
+         * @param <T> factory result type
+         * @return this builder
+         */
         public <T> Builder replaceFactory(
                 InyIdentifier identifier,
                 Class<T> resultType,
@@ -336,18 +422,35 @@ public final class Iny {
             return this;
         }
 
-        /** Explicitly replaces an existing factory using a canonical identifier string. */
+        /**
+         * Explicitly replaces an existing factory using a canonical identifier string.
+         *
+         * @param identifier canonical identifier of the registration to replace
+         * @param resultType declared replacement result type
+         * @param factory replacement factory
+         * @param <T> factory result type
+         * @return this builder
+         */
         public <T> Builder replaceFactory(String identifier, Class<T> resultType, InyFactory<T> factory) {
             return replaceFactory(InyIdentifier.parse(identifier), resultType, factory);
         }
 
-        /** Installs a lightweight group of related decoders and factories. */
+        /**
+         * Installs a lightweight group of related decoders and factories.
+         *
+         * @param module module to configure this builder
+         * @return this builder
+         */
         public Builder install(InyModule module) {
             Objects.requireNonNull(module, "module").configure(this);
             return this;
         }
 
-        /** Builds a service with an immutable snapshot of the configured decoders. */
+        /**
+         * Builds a service with immutable snapshots of the configured decoders and factories.
+         *
+         * @return the configured immutable service
+         */
         public Iny build() {
             return new Iny(new InyDecoderRegistry(decoders), new InyFactoryRegistry(factories));
         }

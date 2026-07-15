@@ -2,9 +2,15 @@ package net.iridiummc.iny.source;
 
 import java.util.Objects;
 
-/** Source text together with the name used in diagnostics. */
+/**
+ * Source text together with the name used in diagnostics.
+ *
+ * @param name diagnostic source name
+ * @param text complete source text
+ */
 public record InySource(String name, String text) {
 
+    /** Validates and creates a named source. */
     public InySource {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(text, "text");
@@ -13,7 +19,12 @@ public record InySource(String name, String text) {
         }
     }
 
-    /** Returns the source line using a one-based line number. */
+    /**
+     * Returns the source line using a one-based line number.
+     *
+     * @param lineNumber one-based line number
+     * @return the requested line, or an empty string when it does not exist
+     */
     public String line(int lineNumber) {
         if (lineNumber < 1) {
             return "";

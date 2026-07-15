@@ -4,5 +4,10 @@ package net.iridiummc.iny.api;
 @FunctionalInterface
 public interface InyModule {
 
+    /**
+     * Adds this module's registrations to a service builder.
+     *
+     * @param builder builder to configure
+     */
     void configure(Iny.Builder builder);
 }

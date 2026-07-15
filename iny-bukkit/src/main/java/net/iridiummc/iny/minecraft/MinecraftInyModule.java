@@ -18,6 +18,11 @@ public final class MinecraftInyModule implements InyModule {
 
     private final Server server;
 
+    /**
+     * Creates a module backed by one Bukkit server.
+     *
+     * @param server server used to resolve worlds and other Bukkit values
+     */
     public MinecraftInyModule(Server server) {
         this.server = Objects.requireNonNull(server, "server");
     }

@@ -19,7 +19,11 @@ public final class InyReadyEvent extends Event {
         this.iny = Objects.requireNonNull(iny, "iny");
     }
 
-    /** Returns the ready shared INY plugin instance. */
+    /**
+     * Returns the ready shared INY plugin instance.
+     *
+     * @return the ready plugin instance
+     */
     public INY iny() {
         return iny;
     }
@@ -29,5 +33,12 @@ public final class InyReadyEvent extends Event {
         return HANDLERS;
     }
 
-    public static HandlerList getHandlerList() { return HANDLERS; }
+    /**
+     * Returns the static Bukkit handler list for this event type.
+     *
+     * @return this event type's handler list
+     */
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
+    }
 }
