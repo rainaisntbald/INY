@@ -90,8 +90,30 @@ class InyConfigTest {
                 """);
 
         List<Integer> values = config.getList("values", Integer.class);
+        List<Object> rawValues = config.getList("values");
 
         assertEquals(new ArrayList<>(List.of(1, 2, 3)), values);
+        assertThrows(UnsupportedOperationException.class, () -> values.add(4));
+        assertThrows(UnsupportedOperationException.class, () -> rawValues.add(4));
+    }
+
+    @Test
+    void defaultSectionListMethodsReturnImmutableDefensiveCopies() {
+        ArrayList<Object> backing = new ArrayList<>();
+        backing.add("one");
+        backing.add(null);
+        InySection section = () -> Map.of("values", backing);
+
+        List<Object> rawValues = section.getList("values");
+        List<String> typedValues = section.getList("values", String.class);
+        backing.add("two");
+
+        assertEquals(2, rawValues.size());
+        assertEquals(2, typedValues.size());
+        assertNull(rawValues.get(1));
+        assertNull(typedValues.get(1));
+        assertThrows(UnsupportedOperationException.class, () -> rawValues.add("three"));
+        assertThrows(UnsupportedOperationException.class, () -> typedValues.add("three"));
     }
 
     @Test

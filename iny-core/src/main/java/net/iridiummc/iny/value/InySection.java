@@ -1,6 +1,7 @@
 package net.iridiummc.iny.value;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -77,12 +78,12 @@ public interface InySection {
         if (!(value instanceof List<?> list)) {
             throw new IllegalArgumentException("Section value '" + path + "' is not a list");
         }
-        @SuppressWarnings("unchecked")
-        List<Object> cast = (List<Object>) list;
-        return cast;
+        ArrayList<Object> copy = new ArrayList<>(list.size());
+        copy.addAll(list);
+        return Collections.unmodifiableList(copy);
     }
 
-    /** Returns a required list whose elements are decoded as the requested type. */
+    /** Returns a required immutable list whose elements are decoded as the requested type. */
     default <T> List<T> getList(String path, Class<T> type) {
         Objects.requireNonNull(type, "type");
         List<Object> values = getList(path);
@@ -90,7 +91,7 @@ public interface InySection {
         for (int index = 0; index < values.size(); index++) {
             decoded.add(cast(path + "[" + index + "]", values.get(index), type));
         }
-        return decoded;
+        return Collections.unmodifiableList(decoded);
     }
 
     private static <T> T cast(String path, Object value, Class<T> type) {

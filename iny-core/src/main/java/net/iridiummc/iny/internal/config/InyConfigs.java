@@ -90,9 +90,11 @@ public final class InyConfigs {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public List<Object> getList(String path) {
-            return (List<Object>) get(path, List.class);
+            List<?> list = get(path, List.class);
+            ArrayList<Object> copy = new ArrayList<>(list.size());
+            copy.addAll(list);
+            return Collections.unmodifiableList(copy);
         }
 
         @Override
@@ -109,7 +111,7 @@ public final class InyConfigs {
                 decoded.add(values.resolve(
                         list.values().get(index), type, fullPath + "[" + index + "]"));
             }
-            return decoded;
+            return Collections.unmodifiableList(decoded);
         }
 
         private Optional<InyValue> resolve(String relativePath, String fullPath, boolean required) {

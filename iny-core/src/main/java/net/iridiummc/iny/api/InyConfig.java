@@ -38,6 +38,6 @@ public interface InyConfig extends InySection {
     /** Returns a required immutable list of ordinary Java values. */
     List<Object> getList(String path);
 
-    /** Returns a required list whose elements are decoded as the requested type. */
+    /** Returns a required immutable list whose elements are decoded as the requested type. */
     <T> List<T> getList(String path, Class<T> type);
 }
