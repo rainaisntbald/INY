@@ -2,5 +2,5 @@ name: INY
 version: '${version}'
 
 main: net.iridiummc.iny.INY
-api-version: '26.1.1'
+api-version: '26.1.2'
 load: STARTUP
