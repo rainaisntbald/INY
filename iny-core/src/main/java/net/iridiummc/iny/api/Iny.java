@@ -14,6 +14,7 @@ import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
 import net.iridiummc.iny.internal.codec.BuiltInDecoders;
+import net.iridiummc.iny.internal.config.InyConfigs;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
 import net.iridiummc.iny.internal.parser.Parser;
@@ -85,7 +86,7 @@ public final class Iny {
     public InyConfig parse(InySource source) {
         Objects.requireNonNull(source, "source");
         InySection root = new Parser(source, new Lexer(source).lex()).parse();
-        return new InyConfig(this, root);
+        return InyConfigs.create(this, root);
     }
 
     /** Returns the immutable decoder registry used by this service. */

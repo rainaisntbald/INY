@@ -7,8 +7,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CoreArchitectureTest {
+
+    @Test
+    void configurationApiIsAnInterfaceBackedByAnInternalImplementation() {
+        var config = net.iridiummc.iny.api.Iny.builder().build().parse("value: 1");
+
+        assertTrue(net.iridiummc.iny.api.InyConfig.class.isInterface());
+        assertTrue(config.getClass().getPackageName().startsWith("net.iridiummc.iny.internal."));
+    }
 
     @Test
     void coreSourcesHaveNoBukkitDependency() throws IOException {
