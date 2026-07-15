@@ -10,6 +10,11 @@ val bundledCore = configurations.create("bundledCore") {
     isTransitive = false
 }
 
+val coreJar = project(":iny-core").layout.buildDirectory.file(
+    "libs/iny-core-${project.version}.jar"
+)
+val coreSources = project(":iny-core").layout.projectDirectory.dir("src/main/java")
+
 dependencies {
     compileOnly(project(":iny-core"))
     bundledCore(project(":iny-core"))
@@ -22,10 +27,19 @@ dependencies {
 }
 
 tasks {
+    compileJava {
+        dependsOn(":iny-core:jar")
+        options.compilerArgs.addAll(listOf(
+            "-Xlint:-requires-transitive-automatic",
+            "--patch-module",
+            "net.iridiummc.iny.bukkit=${coreJar.get().asFile.absolutePath}"
+        ))
+    }
+
     jar {
         dependsOn(bundledCore)
         from({ bundledCore.map(::zipTree) }) {
-            exclude("META-INF/MANIFEST.MF")
+            exclude("META-INF/MANIFEST.MF", "module-info.class")
         }
     }
 
@@ -39,5 +53,24 @@ tasks {
         filesMatching("plugin.yml") {
             expand(props)
         }
+    }
+
+    sourcesJar {
+        from(coreSources) {
+            exclude("module-info.java")
+        }
+    }
+
+    javadoc {
+        source(coreSources.asFileTree.matching {
+            exclude("module-info.java")
+        })
+        exclude("**/internal/**", "**/minecraft/**")
+        dependsOn("classes")
+        (options as StandardJavadocDocletOptions).addStringOption(
+            "-patch-module",
+            "net.iridiummc.iny.bukkit=${layout.buildDirectory.dir("classes/java/main").get().asFile.absolutePath}"
+                    + File.pathSeparator + coreJar.get().asFile.absolutePath
+        )
     }
 }
