@@ -32,8 +32,7 @@ import java.util.function.Supplier;
 
 /**
  * Low-level immutable parser and decoder service.
- * Bukkit plugins should use the shared {@link net.iridiummc.iny.INY#getInstance() INY plugin instance}
- * instead of building one service per plugin.
+ * Server integrations should generally share one lifecycle-owned service instead of building one service per plugin.
  */
 public final class Iny {
 
@@ -51,7 +50,7 @@ public final class Iny {
 
     /**
      * Creates a low-level builder preloaded with all built-in decoders.
-     * This is intended for non-Bukkit embedding and library tests; Bukkit consumers use the INY plugin instance.
+     * This is intended for standalone embedding and library tests; server integrations provide their own shared instance.
      */
     public static Builder builder() {
         return new Builder();

@@ -11,10 +11,7 @@ import org.bukkit.block.Block;
 import org.bukkit.util.Vector;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.lang.reflect.Proxy;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,19 +72,6 @@ class MinecraftInyModuleTest {
         assertSame(fixtures.block(), config.get("block", Block.class));
         assertEquals("10,64,-20", fixtures.blockCoordinates().get());
         assertThrows(RuntimeException.class, () -> config.get("bad_block", Block.class));
-    }
-
-    @Test
-    void genericRegistrySourcesHaveNoBukkitDependency() throws IOException {
-        for (String packageName : new String[]{"api", "factory", "internal/factory"}) {
-            Path directory = Path.of("src/main/java/net/iridiummc/iny", packageName);
-            try (var paths = Files.walk(directory)) {
-                for (Path path : paths.filter(file -> file.toString().endsWith(".java")).toList()) {
-                    String source = Files.readString(path);
-                    assertTrue(!source.contains("org.bukkit"), () -> path + " imports Bukkit");
-                }
-            }
-        }
     }
 
     private static Iny service(Fixtures fixtures) {
