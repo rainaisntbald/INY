@@ -89,7 +89,7 @@ public final class MinecraftInyModule implements InyModule {
         }
 
         int count = context.arguments().get(1, Integer.class);
-        if(count < 0) throw new IllegalArgumentException("Invalid stack size: " + count);
+        if(count < 1 || count > 99) throw new IllegalArgumentException("Invalid stack size: " + count);
 
         return new ItemStack(material, count);
     }
