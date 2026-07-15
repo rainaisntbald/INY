@@ -10,16 +10,17 @@ import net.iridiummc.iny.exception.InyMissingDecoderException;
 import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,7 +44,7 @@ class InyConfigTest {
         assertTrue(config.contains("outer.inner.value"));
         assertFalse(config.contains("outer.inner.absent"));
         assertInstanceOf(InySection.class, config.getValue("outer.inner"));
-        assertEquals(1, config.getList("outer.values").values().size());
+        assertEquals(1, config.getList("outer.values").size());
     }
 
     @Test
@@ -58,6 +59,40 @@ class InyConfigTest {
         List<Integer> values = config.getList("values", Integer.class);
 
         assertEquals(new ArrayList<>(List.of(1, 2, 3)), values);
+    }
+
+    @Test
+    void objectLookupReturnsOnlyOrdinaryJavaValues() {
+        InyConfig config = iny.parse("""
+                text: "Test"
+                integer: 12
+                decimal: 12.5
+                enabled: true
+                missing: null
+                values:
+                  - "entry"
+                  - 2
+                  - false
+                nested {
+                  name: "section"
+                }
+                """);
+
+        Object text = config.get("text", Object.class);
+        assertInstanceOf(String.class, text);
+        assertEquals("Test", text);
+        assertInstanceOf(java.math.BigInteger.class, config.getValue("integer"));
+        assertInstanceOf(java.math.BigDecimal.class, config.getValue("decimal"));
+        assertInstanceOf(Boolean.class, config.getValue("enabled"));
+        assertNull(config.getValue("missing"));
+
+        List<?> values = assertInstanceOf(List.class, config.getValue("values"));
+        assertEquals("entry", values.get(0));
+        assertInstanceOf(java.math.BigInteger.class, values.get(1));
+        assertEquals(false, values.get(2));
+
+        InySection section = assertInstanceOf(InySection.class, config.getValue("nested"));
+        assertEquals(Map.of("name", "section"), section.entries());
     }
 
     @Test
@@ -182,7 +217,7 @@ class InyConfigTest {
         }
 
         @Override
-        public Person decode(InyValue value, InyDecodeContext context) {
+        public Person decode(Object value, InyDecodeContext context) {
             if (!(value instanceof InySection section)) {
                 throw context.failure("a person must be a section");
             }
@@ -199,7 +234,7 @@ class InyConfigTest {
         }
 
         @Override
-        public String decode(InyValue value, InyDecodeContext context) {
+        public String decode(Object value, InyDecodeContext context) {
             return "overridden";
         }
     }

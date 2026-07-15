@@ -1,9 +1,7 @@
 package net.iridiummc.iny.codec;
 
-import net.iridiummc.iny.value.InyValue;
-
 /**
- * Converts one semantic INY value into a requested Java type.
+ * Converts an ordinary Java representation of an INY value into a requested Java type.
  *
  * @param <T> exact Java target type
  */
@@ -13,5 +11,5 @@ public interface InyDecoder<T> {
     Class<T> targetType();
 
     /** Decodes a value or throws a contextual decoding exception. */
-    T decode(InyValue value, InyDecodeContext context);
+    T decode(Object value, InyDecodeContext context);
 }

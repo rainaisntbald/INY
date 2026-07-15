@@ -1,9 +1,11 @@
-package net.iridiummc.iny.value;
+package net.iridiummc.iny.internal.value;
+
+import net.iridiummc.iny.value.InyValueType;
 
 import java.util.List;
 import java.util.Objects;
 
-/** An immutable ordered list of INY values. */
+/** Internal immutable list node. */
 public record InyList(List<InyValue> values) implements InyValue {
 
     public InyList {

@@ -1,6 +1,8 @@
-package net.iridiummc.iny.value;
+package net.iridiummc.iny.internal.value;
 
-/** An INY boolean. */
+import net.iridiummc.iny.value.InyValueType;
+
+/** Internal INY boolean node. */
 public record InyBoolean(boolean value) implements InyValue {
 
     @Override

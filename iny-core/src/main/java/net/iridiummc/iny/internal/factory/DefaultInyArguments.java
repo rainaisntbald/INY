@@ -3,7 +3,7 @@ package net.iridiummc.iny.internal.factory;
 import net.iridiummc.iny.exception.InyArgumentCountException;
 import net.iridiummc.iny.exception.InyFactoryArgumentException;
 import net.iridiummc.iny.factory.InyArguments;
-import net.iridiummc.iny.value.InyValue;
+import net.iridiummc.iny.internal.value.InyValue;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,8 +26,9 @@ final class DefaultInyArguments implements InyArguments {
     }
 
     @Override
-    public InyValue value(int index) {
-        return checkedValue(index, InyValue.class);
+    public Object value(int index) {
+        InyValue value = checkedValue(index, Object.class);
+        return context.values().resolve(value, Object.class, context.path() + "[" + index + "]");
     }
 
     @Override
@@ -36,7 +37,7 @@ final class DefaultInyArguments implements InyArguments {
         InyValue value = checkedValue(index, type);
         String argumentPath = context.path() + "[" + index + "]";
         try {
-            return context.iny().resolveValue(value, type, argumentPath);
+            return context.values().resolve(value, type, argumentPath);
         } catch (RuntimeException exception) {
             throw new InyFactoryArgumentException(
                     context.path(),
@@ -55,7 +56,7 @@ final class DefaultInyArguments implements InyArguments {
         if (index < 0) {
             throw missing(index, type);
         }
-        return index >= values.size() ? Optional.empty() : Optional.of(get(index, type));
+        return index >= values.size() ? Optional.empty() : Optional.ofNullable(get(index, type));
     }
 
     @Override

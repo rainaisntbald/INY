@@ -1,39 +1,41 @@
 package net.iridiummc.iny.value;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-/** An insertion-ordered immutable mapping of keys to INY values. */
-public record InySection(Map<String, InyValue> entries) implements InyValue {
+/**
+ * An insertion-ordered, immutable structural view of an INY section.
+ * Scalar values are exposed as their ordinary Java equivalents, nested sections as
+ * {@code InySection}, and lists as immutable {@code List<Object>} values.
+ */
+public interface InySection {
 
-    public InySection {
-        Objects.requireNonNull(entries, "entries");
-        LinkedHashMap<String, InyValue> copy = new LinkedHashMap<>();
-        entries.forEach((key, value) -> copy.put(
-                Objects.requireNonNull(key, "section key"),
-                Objects.requireNonNull(value, "section value")));
-        entries = Collections.unmodifiableMap(copy);
+    /** Returns an immutable insertion-ordered view of this section's entries. */
+    Map<String, Object> entries();
+
+    /**
+     * Returns a value when the key exists and its value is not INY {@code null}.
+     * Use {@link #contains(String)} when an explicit null must be distinguished from a missing key.
+     */
+    default Optional<Object> find(String key) {
+        Objects.requireNonNull(key, "key");
+        return Optional.ofNullable(entries().get(key));
     }
 
-    public Optional<InyValue> find(String key) {
+    /** Returns the value for a required key, including Java {@code null} for INY {@code null}. */
+    default Object get(String key) {
         Objects.requireNonNull(key, "key");
-        return Optional.ofNullable(entries.get(key));
-    }
-
-    public InyValue get(String key) {
-        Objects.requireNonNull(key, "key");
-        InyValue value = entries.get(key);
-        if (value == null) {
+        Map<String, Object> entries = entries();
+        if (!entries.containsKey(key)) {
             throw new IllegalArgumentException("Section has no key '" + key + "'");
         }
-        return value;
+        return entries.get(key);
     }
 
-    @Override
-    public InyValueType type() {
-        return InyValueType.SECTION;
+    /** Tests whether this section contains the supplied direct child key. */
+    default boolean contains(String key) {
+        Objects.requireNonNull(key, "key");
+        return entries().containsKey(key);
     }
 }

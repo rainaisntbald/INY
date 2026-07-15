@@ -2,16 +2,11 @@ package net.iridiummc.iny.internal.codec;
 
 import net.iridiummc.iny.codec.InyDecodeContext;
 import net.iridiummc.iny.codec.InyDecoder;
-import net.iridiummc.iny.value.InyBoolean;
-import net.iridiummc.iny.value.InyDecimal;
-import net.iridiummc.iny.value.InyInteger;
-import net.iridiummc.iny.value.InyList;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyString;
-import net.iridiummc.iny.value.InyValue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Map;
 
 /** Installs the strict built-in decoder set into the same map used for extensions. */
@@ -22,8 +17,8 @@ public final class BuiltInDecoders {
 
     public static void install(Map<Class<?>, InyDecoder<?>> decoders) {
         put(decoders, decoder(String.class, (value, context) -> {
-            if (value instanceof InyString string) {
-                return string.value();
+            if (value instanceof String string) {
+                return string;
             }
             throw context.failure("only INY strings decode as Java strings");
         }));
@@ -41,35 +36,42 @@ public final class BuiltInDecoders {
         put(decoders, decoder(double.class, BuiltInDecoders::decodeDouble));
         put(decoders, decoder(Float.class, BuiltInDecoders::decodeFloat));
         put(decoders, decoder(float.class, BuiltInDecoders::decodeFloat));
-        put(decoders, decoder(InyValue.class, (value, context) -> value));
+        put(decoders, decoder(BigInteger.class, BuiltInDecoders::integer));
+        put(decoders, decoder(BigDecimal.class, BuiltInDecoders::decimal));
+        put(decoders, decoder(Object.class, (value, context) -> value));
         put(decoders, decoder(InySection.class, (value, context) -> {
             if (value instanceof InySection section) {
                 return section;
             }
             throw context.failure("the value is not a section");
         }));
-        put(decoders, decoder(InyList.class, (value, context) -> {
-            if (value instanceof InyList list) {
+        put(decoders, listDecoder());
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static InyDecoder<List> listDecoder() {
+        return decoder(List.class, (value, context) -> {
+            if (value instanceof List<?> list) {
                 return list;
             }
             throw context.failure("the value is not a list");
-        }));
+        });
     }
 
-    private static Boolean decodeBoolean(InyValue value, InyDecodeContext context) {
-        if (value instanceof InyBoolean bool) {
-            return bool.value();
+    private static Boolean decodeBoolean(Object value, InyDecodeContext context) {
+        if (value instanceof Boolean bool) {
+            return bool;
         }
         throw context.failure("only INY booleans decode as Java booleans");
     }
 
-    private static BigInteger integer(InyValue value, InyDecodeContext context) {
+    private static BigInteger integer(Object value, InyDecodeContext context) {
         try {
-            if (value instanceof InyInteger integer) {
-                return integer.value();
+            if (value instanceof BigInteger integer) {
+                return integer;
             }
-            if (value instanceof InyDecimal decimal) {
-                return decimal.value().toBigIntegerExact();
+            if (value instanceof BigDecimal decimal) {
+                return decimal.toBigIntegerExact();
             }
         } catch (ArithmeticException exception) {
             throw context.failure("fractional values cannot decode as integral Java numbers", exception);
@@ -77,7 +79,7 @@ public final class BuiltInDecoders {
         throw context.failure("only numeric INY values decode as Java numbers");
     }
 
-    private static Double decodeDouble(InyValue value, InyDecodeContext context) {
+    private static Double decodeDouble(Object value, InyDecodeContext context) {
         BigDecimal decimal = decimal(value, context);
         double converted = decimal.doubleValue();
         if (!Double.isFinite(converted) || converted == 0.0d && decimal.signum() != 0) {
@@ -86,7 +88,7 @@ public final class BuiltInDecoders {
         return converted;
     }
 
-    private static Float decodeFloat(InyValue value, InyDecodeContext context) {
+    private static Float decodeFloat(Object value, InyDecodeContext context) {
         BigDecimal decimal = decimal(value, context);
         float converted = decimal.floatValue();
         if (!Float.isFinite(converted) || converted == 0.0f && decimal.signum() != 0) {
@@ -95,12 +97,12 @@ public final class BuiltInDecoders {
         return converted;
     }
 
-    private static BigDecimal decimal(InyValue value, InyDecodeContext context) {
-        if (value instanceof InyInteger integer) {
-            return new BigDecimal(integer.value());
+    private static BigDecimal decimal(Object value, InyDecodeContext context) {
+        if (value instanceof BigInteger integer) {
+            return new BigDecimal(integer);
         }
-        if (value instanceof InyDecimal decimal) {
-            return decimal.value();
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
         }
         throw context.failure("only numeric INY values decode as Java numbers");
     }
@@ -113,7 +115,7 @@ public final class BuiltInDecoders {
             }
 
             @Override
-            public T decode(InyValue value, InyDecodeContext context) {
+            public T decode(Object value, InyDecodeContext context) {
                 try {
                     return function.decode(value, context);
                 } catch (ArithmeticException exception) {
@@ -132,6 +134,6 @@ public final class BuiltInDecoders {
 
     @FunctionalInterface
     private interface DecodeFunction<T> {
-        T decode(InyValue value, InyDecodeContext context);
+        T decode(Object value, InyDecodeContext context);
     }
 }

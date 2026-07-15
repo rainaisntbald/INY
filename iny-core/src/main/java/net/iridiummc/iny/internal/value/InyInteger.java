@@ -1,9 +1,11 @@
-package net.iridiummc.iny.value;
+package net.iridiummc.iny.internal.value;
+
+import net.iridiummc.iny.value.InyValueType;
 
 import java.math.BigInteger;
 import java.util.Objects;
 
-/** An arbitrary-precision integral INY number. */
+/** Internal arbitrary-precision integral node. */
 public record InyInteger(BigInteger value) implements InyValue {
 
     public InyInteger {

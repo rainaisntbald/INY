@@ -15,7 +15,6 @@ import net.iridiummc.iny.exception.InyUnknownFactoryException;
 import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyValue;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -320,7 +319,7 @@ class InyFactoryTest {
         }
 
         @Override
-        public Label decode(InyValue value, InyDecodeContext context) {
+        public Label decode(Object value, InyDecodeContext context) {
             if (!(value instanceof InySection section)) {
                 throw context.failure("a label must be a section");
             }

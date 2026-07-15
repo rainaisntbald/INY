@@ -3,13 +3,7 @@ package net.iridiummc.iny;
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyConfig;
 import net.iridiummc.iny.exception.InyParseException;
-import net.iridiummc.iny.value.InyBoolean;
-import net.iridiummc.iny.value.InyDecimal;
-import net.iridiummc.iny.value.InyInteger;
-import net.iridiummc.iny.value.InyList;
-import net.iridiummc.iny.value.InyNull;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyString;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -18,7 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,14 +33,14 @@ class InyParserTest {
                 missing: null
                 """).root();
 
-        assertEquals(new InyString("Example"), root.get("string"));
-        assertEquals(new InyString("identifier-value"), root.get("bare"));
-        assertEquals(new InyInteger(BigInteger.valueOf(12)), root.get("integer"));
-        assertEquals(new InyInteger(new BigInteger("9000000000")), root.get("large"));
-        assertEquals(new InyDecimal(new BigDecimal("1.50")), root.get("decimal"));
-        assertEquals(new InyBoolean(true), root.get("enabled"));
-        assertEquals(new InyBoolean(false), root.get("disabled"));
-        assertSame(InyNull.INSTANCE, root.get("missing"));
+        assertEquals("Example", root.get("string"));
+        assertEquals("identifier-value", root.get("bare"));
+        assertEquals(BigInteger.valueOf(12), root.get("integer"));
+        assertEquals(new BigInteger("9000000000"), root.get("large"));
+        assertEquals(new BigDecimal("1.5"), root.get("decimal"));
+        assertEquals(true, root.get("enabled"));
+        assertEquals(false, root.get("disabled"));
+        assertNull(root.get("missing"));
     }
 
     @Test
@@ -66,7 +60,7 @@ class InyParserTest {
 
     @Test
     void parsesScalarListsAndSectionsInLists() {
-        InyList list = iny.parse("""
+        List<Object> list = iny.parse("""
                 values:
                   - "one"
                   - "two"
@@ -77,16 +71,16 @@ class InyParserTest {
                 after: 4
                 """).getList("values");
 
-        assertEquals(new InyString("one"), list.values().get(0));
-        assertEquals(new InyString("two"), list.values().get(1));
-        InySection section = assertInstanceOf(InySection.class, list.values().get(2));
-        assertEquals(new InyString("three"), section.get("name"));
-        assertEquals(new InyBoolean(true), section.get("enabled"));
+        assertEquals("one", list.get(0));
+        assertEquals("two", list.get(1));
+        InySection section = assertInstanceOf(InySection.class, list.get(2));
+        assertEquals("three", section.get("name"));
+        assertEquals(true, section.get("enabled"));
     }
 
     @Test
     void parsesNestedListsUsingStandaloneDashBoundaries() {
-        InyList matrix = iny.parse("""
+        List<Object> matrix = iny.parse("""
                 matrix:
                   -
                     - 1
@@ -96,9 +90,9 @@ class InyParserTest {
                     - 4
                 """).getList("matrix");
 
-        assertEquals(2, matrix.values().size());
-        assertEquals(new InyList(List.of(new InyInteger(1), new InyInteger(2))), matrix.values().get(0));
-        assertEquals(new InyList(List.of(new InyInteger(3), new InyInteger(4))), matrix.values().get(1));
+        assertEquals(2, matrix.size());
+        assertEquals(List.of(BigInteger.ONE, BigInteger.TWO), matrix.get(0));
+        assertEquals(List.of(BigInteger.valueOf(3), BigInteger.valueOf(4)), matrix.get(1));
     }
 
     @Test

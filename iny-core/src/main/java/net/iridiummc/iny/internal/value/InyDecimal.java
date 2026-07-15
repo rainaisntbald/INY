@@ -1,9 +1,11 @@
-package net.iridiummc.iny.value;
+package net.iridiummc.iny.internal.value;
+
+import net.iridiummc.iny.value.InyValueType;
 
 import java.math.BigDecimal;
 import java.util.Objects;
 
-/** An arbitrary-precision decimal INY number. */
+/** Internal arbitrary-precision decimal node. */
 public record InyDecimal(BigDecimal value) implements InyValue {
 
     public InyDecimal {

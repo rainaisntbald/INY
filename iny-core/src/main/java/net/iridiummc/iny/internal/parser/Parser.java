@@ -6,15 +6,15 @@ import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.lexer.TokenType;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.source.SourcePosition;
-import net.iridiummc.iny.value.InyBoolean;
-import net.iridiummc.iny.value.InyCall;
-import net.iridiummc.iny.value.InyDecimal;
-import net.iridiummc.iny.value.InyInteger;
-import net.iridiummc.iny.value.InyList;
-import net.iridiummc.iny.value.InyNull;
-import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyString;
-import net.iridiummc.iny.value.InyValue;
+import net.iridiummc.iny.internal.value.InyBoolean;
+import net.iridiummc.iny.internal.value.InyCall;
+import net.iridiummc.iny.internal.value.InyDecimal;
+import net.iridiummc.iny.internal.value.InyInteger;
+import net.iridiummc.iny.internal.value.InyList;
+import net.iridiummc.iny.internal.value.InyNull;
+import net.iridiummc.iny.internal.value.InySectionValue;
+import net.iridiummc.iny.internal.value.InyString;
+import net.iridiummc.iny.internal.value.InyValue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,14 +36,14 @@ public final class Parser {
         this.tokens = List.copyOf(tokens);
     }
 
-    public InySection parse() {
+    public InySectionValue parse() {
         skipNewlines();
-        InySection root = parseEntries(TokenType.EOF);
+        InySectionValue root = parseEntries(TokenType.EOF);
         consume(TokenType.EOF, "end of input", "Unexpected content after the root section");
         return root;
     }
 
-    private InySection parseEntries(TokenType terminator) {
+    private InySectionValue parseEntries(TokenType terminator) {
         Map<String, InyValue> entries = new LinkedHashMap<>();
         Map<String, SourcePosition> keyPositions = new LinkedHashMap<>();
 
@@ -75,7 +75,7 @@ public final class Parser {
         if (terminator != TokenType.EOF && check(TokenType.EOF)) {
             throw error(peek(), display(terminator), "Section was not closed");
         }
-        return new InySection(entries);
+        return new InySectionValue(entries);
     }
 
     private InyValue parseEntryValue(Token key) {
@@ -105,12 +105,12 @@ public final class Parser {
         return parseValue();
     }
 
-    private InySection parseBracedSection() {
+    private InySectionValue parseBracedSection() {
         skipNewlines();
         if (match(TokenType.RIGHT_BRACE)) {
-            return new InySection(Map.of());
+            return new InySectionValue(Map.of());
         }
-        InySection section = parseEntries(TokenType.RIGHT_BRACE);
+        InySectionValue section = parseEntries(TokenType.RIGHT_BRACE);
         consume(TokenType.RIGHT_BRACE, "'}'", "Section was not closed");
         return section;
     }

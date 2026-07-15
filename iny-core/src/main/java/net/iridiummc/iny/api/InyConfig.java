@@ -1,8 +1,6 @@
 package net.iridiummc.iny.api;
 
-import net.iridiummc.iny.value.InyList;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyValue;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,17 +23,20 @@ public interface InyConfig {
     /** Tests whether a valid dotted path exists. */
     boolean contains(String path);
 
-    /** Returns the raw value at a required dotted path. */
-    InyValue getValue(String path);
+    /** Returns a required dotted path as its ordinary Java representation. */
+    Object getValue(String path);
 
-    /** Returns the raw value at a dotted path, or empty when a key is missing. */
-    Optional<InyValue> findValue(String path);
+    /**
+     * Returns a dotted path as its ordinary Java representation, or empty when missing or explicitly null.
+     * Use {@link #contains(String)} to distinguish an explicit null from a missing path.
+     */
+    Optional<Object> findValue(String path);
 
     /** Returns a required section value. */
     InySection getSection(String path);
 
-    /** Returns a required list value. */
-    InyList getList(String path);
+    /** Returns a required immutable list of ordinary Java values. */
+    List<Object> getList(String path);
 
     /** Returns a required list whose elements are decoded as the requested type. */
     <T> List<T> getList(String path, Class<T> type);

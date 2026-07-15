@@ -1,8 +1,10 @@
-package net.iridiummc.iny.value;
+package net.iridiummc.iny.internal.value;
+
+import net.iridiummc.iny.value.InyValueType;
 
 import java.util.Objects;
 
-/** An INY string, from either a quoted string or a bare scalar identifier. */
+/** Internal INY string node. */
 public record InyString(String value) implements InyValue {
 
     public InyString {

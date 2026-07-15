@@ -2,8 +2,6 @@ package net.iridiummc.iny.factory;
 
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyIdentifier;
-import net.iridiummc.iny.value.InyValue;
-
 /** Path-aware services supplied to a registered factory. */
 public interface InyFactoryContext {
 
@@ -16,8 +14,8 @@ public interface InyFactoryContext {
     Iny iny();
 
     /** Decodes an ordinary value without evaluating factory calls. */
-    <T> T decode(InyValue value, Class<T> type);
+    <T> T decode(Object value, Class<T> type);
 
     /** Decodes a value, evaluating it first when it is a factory call. */
-    <T> T resolve(InyValue value, Class<T> type);
+    <T> T resolve(Object value, Class<T> type);
 }

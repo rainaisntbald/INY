@@ -1,13 +1,14 @@
-package net.iridiummc.iny.value;
+package net.iridiummc.iny.internal.value;
 
 import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.source.SourcePosition;
+import net.iridiummc.iny.value.InyValueType;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/** An immutable, unevaluated namespaced factory call. */
+/** Internal immutable, unevaluated factory-call node. */
 public final class InyCall implements InyValue {
 
     private final InyIdentifier identifier;
@@ -20,8 +21,7 @@ public final class InyCall implements InyValue {
 
     public InyCall(InyIdentifier identifier, List<InyValue> arguments, SourcePosition position) {
         this.identifier = Objects.requireNonNull(identifier, "identifier");
-        Objects.requireNonNull(arguments, "arguments");
-        this.arguments = List.copyOf(arguments);
+        this.arguments = List.copyOf(Objects.requireNonNull(arguments, "arguments"));
         this.position = position;
     }
 
@@ -33,7 +33,6 @@ public final class InyCall implements InyValue {
         return arguments;
     }
 
-    /** Returns the call's source location when it originated in parsed text. */
     public Optional<SourcePosition> position() {
         return Optional.ofNullable(position);
     }
@@ -53,10 +52,5 @@ public final class InyCall implements InyValue {
     @Override
     public int hashCode() {
         return Objects.hash(identifier, arguments);
-    }
-
-    @Override
-    public String toString() {
-        return "InyCall[identifier=" + identifier + ", arguments=" + arguments + "]";
     }
 }

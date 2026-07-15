@@ -14,19 +14,34 @@ import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
 import net.iridiummc.iny.internal.codec.BuiltInDecoders;
+import net.iridiummc.iny.internal.codec.DefaultInyDecodeContext;
+import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.config.InyConfigs;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
 import net.iridiummc.iny.internal.parser.Parser;
 import net.iridiummc.iny.internal.source.SourceLoading;
+import net.iridiummc.iny.internal.value.InyBoolean;
+import net.iridiummc.iny.internal.value.InyCall;
+import net.iridiummc.iny.internal.value.InyDecimal;
+import net.iridiummc.iny.internal.value.InyInteger;
+import net.iridiummc.iny.internal.value.InyList;
+import net.iridiummc.iny.internal.value.InyNull;
+import net.iridiummc.iny.internal.value.InySectionValue;
+import net.iridiummc.iny.internal.value.InyString;
+import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.value.InyCall;
-import net.iridiummc.iny.value.InyValue;
+import net.iridiummc.iny.value.InyValueType;
 
 import java.io.Reader;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -39,6 +54,17 @@ public final class Iny {
 
     private final InyDecoderRegistry decoders;
     private final Supplier<InyFactoryRegistry> factories;
+    private final InyValueAccess values = new InyValueAccess() {
+        @Override
+        public <T> T resolve(Object value, Class<T> type, String path) {
+            return resolveValue(value, type, path);
+        }
+
+        @Override
+        public <T> T decode(Object value, Class<T> type, String path) {
+            return decodeValue(value, type, path);
+        }
+    };
 
     private Iny(InyDecoderRegistry decoders, InyFactoryRegistry factories) {
         this(decoders, () -> factories);
@@ -85,8 +111,8 @@ public final class Iny {
     /** Parses an already constructed named source. */
     public InyConfig parse(InySource source) {
         Objects.requireNonNull(source, "source");
-        InySection root = new Parser(source, new Lexer(source).lex()).parse();
-        return InyConfigs.create(this, root);
+        InySectionValue root = new Parser(source, new Lexer(source).lex()).parse();
+        return InyConfigs.create(values, root);
     }
 
     /** Returns the immutable decoder registry used by this service. */
@@ -108,14 +134,16 @@ public final class Iny {
     }
 
     /** Resolves calls through the factory registry and ordinary values through decoders. */
-    public <T> T resolveValue(InyValue value, Class<T> type, String path) {
-        Objects.requireNonNull(value, "value");
+    private <T> T resolveValue(Object value, Class<T> type, String path) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(path, "path");
-        if (!(value instanceof InyCall call)) {
+        if (!(value instanceof InyValue internalValue)) {
             return decodeValue(value, type, path);
         }
-        return resolveCall(call, type, path);
+        if (internalValue instanceof InyCall call) {
+            return resolveCall(call, type, path);
+        }
+        return decodeInternalValue(internalValue, type, path);
     }
 
     private <T> T resolveCall(InyCall call, Class<T> requestedType, String path) {
@@ -128,7 +156,7 @@ public final class Iny {
 
         Object result;
         try {
-            result = registration.factory().create(new DefaultInyFactoryContext(this, call, path));
+            result = registration.factory().create(new DefaultInyFactoryContext(this, values, call, path));
         } catch (InyFactoryException exception) {
             throw exception;
         } catch (RuntimeException exception) {
@@ -147,18 +175,103 @@ public final class Iny {
      * Decodes a value through this service's exact-type registry.
      * Primarily used by configuration lookups and decoder contexts.
      */
-    public <T> T decodeValue(InyValue value, Class<T> type, String path) {
-        Objects.requireNonNull(value, "value");
+    private <T> T decodeValue(Object value, Class<T> type, String path) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(path, "path");
+        if (value instanceof InyValue internalValue) {
+            return decodeInternalValue(internalValue, type, path);
+        }
+        return decodeJavaValue(value, type, path, typeOf(value));
+    }
+
+    private <T> T decodeInternalValue(InyValue value, Class<T> type, String path) {
+        return decodeJavaValue(toJavaValue(value, path), type, path, value.type());
+    }
+
+    private <T> T decodeJavaValue(Object value, Class<T> type, String path, InyValueType actualType) {
         InyDecoder<T> decoder = decoders.find(type)
-                .orElseThrow(() -> new InyMissingDecoderException(path, type));
-        InyDecodeContext context = new InyDecodeContext(this, path, type, value);
+                .orElseGet(() -> directDecoder(value, type, path));
+        InyDecodeContext context = new DefaultInyDecodeContext(this, values, path, type, actualType);
         T decoded = decoder.decode(value, context);
-        if (decoded == null) {
+        if (decoded == null && type != Object.class) {
             throw context.failure("decoder returned Java null");
         }
         return decoded;
+    }
+
+    private <T> InyDecoder<T> directDecoder(Object value, Class<T> type, String path) {
+        Class<?> boxedType = boxed(type);
+        if (value != null && boxedType.isInstance(value)) {
+            return new InyDecoder<>() {
+                @Override
+                public Class<T> targetType() {
+                    return type;
+                }
+
+                @Override
+                @SuppressWarnings("unchecked")
+                public T decode(Object ignored, InyDecodeContext context) {
+                    return (T) value;
+                }
+            };
+        }
+        throw new InyMissingDecoderException(path, type);
+    }
+
+    private Object toJavaValue(InyValue value, String path) {
+        if (value instanceof InyString string) {
+            return string.value();
+        }
+        if (value instanceof InyBoolean bool) {
+            return bool.value();
+        }
+        if (value instanceof InyInteger integer) {
+            return integer.value();
+        }
+        if (value instanceof InyDecimal decimal) {
+            return decimal.value();
+        }
+        if (value instanceof InyNull) {
+            return null;
+        }
+        if (value instanceof InySectionValue section) {
+            return InyConfigs.view(values, section, path);
+        }
+        if (value instanceof InyList list) {
+            ArrayList<Object> values = new ArrayList<>(list.values().size());
+            for (int index = 0; index < list.values().size(); index++) {
+                values.add(resolveValue(list.values().get(index), Object.class, path + "[" + index + "]"));
+            }
+            return Collections.unmodifiableList(values);
+        }
+        if (value instanceof InyCall call) {
+            return resolveCall(call, Object.class, path);
+        }
+        throw new AssertionError("Unknown internal INY value " + value.getClass().getTypeName());
+    }
+
+    private static InyValueType typeOf(Object value) {
+        if (value == null) return InyValueType.NULL;
+        if (value instanceof InySection) return InyValueType.SECTION;
+        if (value instanceof List<?>) return InyValueType.LIST;
+        if (value instanceof String) return InyValueType.STRING;
+        if (value instanceof BigInteger) return InyValueType.INTEGER;
+        if (value instanceof BigDecimal) return InyValueType.DECIMAL;
+        if (value instanceof Boolean) return InyValueType.BOOLEAN;
+        return InyValueType.CALL;
+    }
+
+    private static Class<?> boxed(Class<?> type) {
+        if (!type.isPrimitive()) return type;
+        if (type == boolean.class) return Boolean.class;
+        if (type == byte.class) return Byte.class;
+        if (type == short.class) return Short.class;
+        if (type == int.class) return Integer.class;
+        if (type == long.class) return Long.class;
+        if (type == float.class) return Float.class;
+        if (type == double.class) return Double.class;
+        if (type == char.class) return Character.class;
+        return type;
     }
 
     /** Builder for an immutable service and decoder registry. */
