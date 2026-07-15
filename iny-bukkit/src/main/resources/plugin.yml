@@ -4,4 +4,3 @@ version: '${version}'
 main: net.iridiummc.iny.INY
 api-version: '26.1.1'
 load: STARTUP
-softdepend: ["Nexo"]
