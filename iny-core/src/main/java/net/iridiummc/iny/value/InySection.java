@@ -1,5 +1,11 @@
 package net.iridiummc.iny.value;
 
+import net.iridiummc.iny.exception.InyInvalidPathException;
+import net.iridiummc.iny.exception.InyMissingValueException;
+import net.iridiummc.iny.exception.InyPathTraversalException;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,12 +25,7 @@ public interface InySection {
 
     /** Returns a required relative dotted path as its ordinary Java representation. */
     default Object get(String path) {
-        Objects.requireNonNull(path, "path");
-        Map<String, Object> entries = entries();
-        if (!entries.containsKey(path)) {
-            throw new IllegalArgumentException("Section has no key '" + path + "'");
-        }
-        return entries.get(path);
+        return resolve(this, path, true, null);
     }
 
     /** Returns and decodes a required relative dotted path. */
@@ -51,8 +52,9 @@ public interface InySection {
      * Use {@link #contains(String)} when an explicit null must be distinguished from a missing path.
      */
     default Optional<Object> find(String path) {
-        Objects.requireNonNull(path, "path");
-        return Optional.ofNullable(entries().get(path));
+        Object missing = new Object();
+        Object value = resolve(this, path, false, missing);
+        return value == missing ? Optional.empty() : Optional.ofNullable(value);
     }
 
     /** Returns and decodes a relative dotted path, or empty when missing or explicitly null. */
@@ -63,8 +65,8 @@ public interface InySection {
 
     /** Tests whether a valid relative dotted path exists, including paths whose value is null. */
     default boolean contains(String path) {
-        Objects.requireNonNull(path, "path");
-        return entries().containsKey(path);
+        Object missing = new Object();
+        return resolve(this, path, false, missing) != missing;
     }
 
     /** Returns a required nested section at a relative dotted path. */
@@ -108,6 +110,67 @@ public interface InySection {
         @SuppressWarnings("unchecked")
         T cast = (T) value;
         return cast;
+    }
+
+    private static Object resolve(InySection root, String path, boolean required, Object missing) {
+        List<String> segments = segments(path);
+        InySection current = root;
+
+        for (int index = 0; index < segments.size(); index++) {
+            String segment = segments.get(index);
+            Map<String, Object> entries = current.entries();
+            boolean finalSegment = index == segments.size() - 1;
+            if (!entries.containsKey(segment)) {
+                if (required) {
+                    throw new InyMissingValueException(path, segment, index, finalSegment);
+                }
+                return missing;
+            }
+
+            Object value = entries.get(segment);
+            if (finalSegment) {
+                return value;
+            }
+            if (!(value instanceof InySection childSection)) {
+                throw new InyPathTraversalException(path, segment, actualType(value));
+            }
+            current = childSection;
+        }
+        throw new AssertionError("Validated paths always contain at least one segment");
+    }
+
+    private static List<String> segments(String path) {
+        if (path == null) {
+            throw new InyInvalidPathException("null", "path must not be null");
+        }
+        if (path.isEmpty()) {
+            throw new InyInvalidPathException(path, "path must contain at least one segment");
+        }
+        if (!path.equals(path.trim())) {
+            throw new InyInvalidPathException(path, "leading or trailing whitespace is not allowed");
+        }
+
+        List<String> segments = List.of(path.split("\\.", -1));
+        for (int index = 0; index < segments.size(); index++) {
+            String segment = segments.get(index);
+            if (!segment.matches("[A-Za-z_][A-Za-z0-9_-]*")) {
+                throw new InyInvalidPathException(path,
+                        "segment " + (index + 1) + " ('" + segment + "') is not a valid bare key");
+            }
+        }
+        return segments;
+    }
+
+    private static String actualType(Object value) {
+        if (value == null) return "null";
+        if (value instanceof String) return "string";
+        if (value instanceof Boolean) return "boolean";
+        if (value instanceof Byte || value instanceof Short || value instanceof Integer
+                || value instanceof Long || value instanceof BigInteger) return "integer";
+        if (value instanceof Float || value instanceof Double || value instanceof BigDecimal) return "decimal";
+        if (value instanceof Number) return "number";
+        if (value instanceof List<?>) return "list";
+        return value.getClass().getTypeName();
     }
 
     private static Class<?> boxed(Class<?> type) {

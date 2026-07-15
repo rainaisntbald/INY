@@ -13,6 +13,8 @@ import net.iridiummc.iny.value.InySection;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -114,6 +116,35 @@ class InyConfigTest {
         assertNull(typedValues.get(1));
         assertThrows(UnsupportedOperationException.class, () -> rawValues.add("three"));
         assertThrows(UnsupportedOperationException.class, () -> typedValues.add("three"));
+    }
+
+    @Test
+    void defaultSectionMethodsNavigateDottedPaths() {
+        LinkedHashMap<String, Object> limitEntries = new LinkedHashMap<>();
+        limitEntries.put("players", 20);
+        limitEntries.put("motd", null);
+        InySection limits = () -> Collections.unmodifiableMap(limitEntries);
+        InySection server = () -> Map.of("limits", limits);
+        InySection root = () -> Map.of("server", server);
+
+        assertEquals(20, root.get("server.limits.players", Integer.class));
+        assertEquals(Optional.of(20), root.find("server.limits.players", Integer.class));
+        assertEquals(Optional.empty(), root.find("server.limits.motd"));
+        assertTrue(root.contains("server.limits.motd"));
+        assertFalse(root.contains("server.limits.absent"));
+        assertSame(limits, root.getSection("server.limits"));
+
+        InyMissingValueException missing = assertThrows(InyMissingValueException.class,
+                () -> root.get("server.limits.absent"));
+        assertEquals("server.limits.absent", missing.path());
+
+        InyPathTraversalException traversal = assertThrows(InyPathTraversalException.class,
+                () -> root.contains("server.limits.players.maximum"));
+        assertEquals("players", traversal.segment());
+        assertEquals("integer", traversal.actualType());
+
+        assertThrows(InyInvalidPathException.class, () -> root.get(""));
+        assertThrows(InyInvalidPathException.class, () -> root.find("server..limits"));
     }
 
     @Test
