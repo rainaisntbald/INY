@@ -4,11 +4,14 @@ import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyModule;
 import net.iridiummc.iny.factory.InyFactoryContext;
 import net.iridiummc.iny.MinecraftContextKeys;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
@@ -33,6 +36,10 @@ public final class MinecraftInyModule implements InyModule {
         builder.registerContextKey(MinecraftContextKeys.PLAYER);
         builder.registerContextKey(MinecraftContextKeys.LOCATION);
         builder.registerContextKey(MinecraftContextKeys.WORLD);
+
+        builder.registerRunnable("minecraft:send_message", this::sendMessage);
+        builder.registerRunnable("minecraft:give_item", this::giveItem);
+
         builder.registerFactory("minecraft:world", World.class, this::worldFactory);
         builder.registerFactory("minecraft:material", Material.class, this::materialFactory);
         builder.registerFactory("minecraft:vector", Vector.class, this::vectorFactory);
@@ -96,6 +103,36 @@ public final class MinecraftInyModule implements InyModule {
         if(count < 1 || count > 99) throw new IllegalArgumentException("Invalid stack size: " + count);
 
         return new ItemStack(material, count);
+    }
+
+    private InyRunnable sendMessage(InyFactoryContext context) {
+        context.arguments().requireCount(2);
+
+        InyProvider<Player> playerProvider =
+                context.arguments().getProvider(0, Player.class);
+        InyProvider<String> messageProvider =
+                context.arguments().getProvider(1, String.class);
+
+        return runtime -> {
+            Player player = playerProvider.resolve(runtime);
+            String message = messageProvider.resolve(runtime);
+            player.sendMessage(message);
+        };
+    }
+
+    private InyRunnable giveItem(InyFactoryContext context) {
+        context.arguments().requireCount(2);
+
+        InyProvider<Player> playerProvider =
+                context.arguments().getProvider(0, Player.class);
+        InyProvider<ItemStack> itemStackProvider =
+                context.arguments().getProvider(1, ItemStack.class);
+
+        return runtime -> {
+            Player player = playerProvider.resolve(runtime);
+            ItemStack itemStack = itemStackProvider.resolve(runtime);
+            player.give(itemStack);
+        };
     }
 
     private World world(String name) {
