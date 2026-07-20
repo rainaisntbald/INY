@@ -228,6 +228,20 @@ Runtime contexts and provider results are non-null in 1.1. A missing required va
 
 INY is thread-neutral. Contexts are safe to share, but providers and runnables are only as thread-safe as the services and objects they capture. INY does not schedule their execution.
 
+### Run actions in sequence
+
+INY Core always registers `core:sequence`, which constructs one runnable from zero or more runnable arguments:
+
+```iny
+on_use: core:sequence(
+  example:remove_cost(),
+  example:grant_reward(),
+  example:notify_player()
+)
+```
+
+Each action runs in declaration order with the exact same `InyRuntimeContext`. Sequences may be empty or nested. Providers are valid sequence steps because `InyProvider<T>` extends `InyRunnable`; their results are discarded. Execution stops normally if a step throws. The `core` namespace is reserved for factories supplied by INY Core.
+
 ## Group an integration as a module
 
 An `InyModule` is a lightweight way to install related decoders and factories:

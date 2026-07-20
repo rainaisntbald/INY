@@ -171,6 +171,15 @@ message: context:value("example:message")
 
 The quoted argument is the complete namespaced context-key identifier. Bare shorthand such as `context:message` is not part of the initial runtime syntax. `context:value(...)` constructs a provider during typed configuration retrieval; it reads the context only when that provider is resolved or run.
 
+The `core` namespace is also language-owned. `core:sequence(...)` accepts zero or more runnable-producing calls and executes them in declaration order when the resulting runnable is run:
+
+```iny
+action: core:sequence(
+  example:first_action(),
+  example:second_action()
+)
+```
+
 ## Dotted API paths
 
 Java lookups navigate nested sections with dotted paths:
