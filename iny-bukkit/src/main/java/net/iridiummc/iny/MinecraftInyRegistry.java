@@ -416,6 +416,9 @@ final class MinecraftInyRegistry {
     }
 
     private static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
+        if (identifier.namespace().equals("core")) {
+            throw new IllegalArgumentException("The 'core' namespace is reserved for built-in INY factories");
+        }
         if (identifier.namespace().equals("context")
                 && (!identifier.value().equals("value")
                 || !InyProvider.class.isAssignableFrom(resultType))) {

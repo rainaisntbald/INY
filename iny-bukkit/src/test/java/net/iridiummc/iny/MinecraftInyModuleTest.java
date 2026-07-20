@@ -26,7 +26,8 @@ class MinecraftInyModuleTest {
         Fixtures fixtures = fixtures();
         Iny iny = Iny.builder().install(new MinecraftInyModule(fixtures.server())).build();
 
-        assertEquals(9, iny.factories().size());
+        assertEquals(10, iny.factories().size());
+        assertTrue(iny.factories().contains(InyIdentifier.parse("core:sequence")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:location")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:world")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:material")));

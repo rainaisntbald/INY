@@ -19,6 +19,7 @@ import net.iridiummc.iny.internal.codec.BuiltInDecoders;
 import net.iridiummc.iny.internal.codec.DefaultInyDecodeContext;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.config.InyConfigs;
+import net.iridiummc.iny.internal.factory.BuiltInFactories;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
 import net.iridiummc.iny.internal.parser.Parser;
@@ -406,6 +407,7 @@ public final class Iny {
 
         private Builder() {
             BuiltInDecoders.install(decoders);
+            BuiltInFactories.install(factories);
         }
 
         /**
@@ -715,6 +717,9 @@ public final class Iny {
         private static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
             Objects.requireNonNull(identifier, "identifier");
             Objects.requireNonNull(resultType, "resultType");
+            if (identifier.namespace().equals("core")) {
+                throw new IllegalArgumentException("The 'core' namespace is reserved for built-in INY factories");
+            }
             if (identifier.namespace().equals("context")
                     && (!identifier.value().equals("value")
                     || !InyProvider.class.isAssignableFrom(resultType))) {

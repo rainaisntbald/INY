@@ -41,7 +41,7 @@ class MinecraftGlobalRegistryTest {
         assertSame(plugin, registry.plugin());
         assertSame(registry.iny(), registry.iny());
         assertTrue(registry.isReady());
-        assertEquals(9, registry.factories().size());
+        assertEquals(10, registry.factories().size());
         assertEquals(MinecraftContextKeys.PLAYER,
                 registry.contextKeys().require(InyIdentifier.parse("minecraft:player")));
     }
