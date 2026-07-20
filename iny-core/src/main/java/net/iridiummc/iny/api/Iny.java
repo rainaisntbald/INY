@@ -477,7 +477,7 @@ public final class Iny {
                 Class<T> resultType,
                 InyFactory<T> factory
         ) {
-            requireAvailableFactoryIdentifier(identifier);
+            requireAvailableFactoryIdentifier(identifier, resultType);
             return registerFactory(new InyFactoryRegistration<>(identifier, resultType, factory));
         }
 
@@ -530,7 +530,7 @@ public final class Iny {
          */
         public Builder registerFactory(InyFactoryRegistration<?> registration) {
             Objects.requireNonNull(registration, "registration");
-            requireAvailableFactoryIdentifier(registration.identifier());
+            requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
             if (factories.putIfAbsent(registration.identifier(), registration) != null) {
                 throw new InyDuplicateFactoryException(registration.identifier());
             }
@@ -552,7 +552,7 @@ public final class Iny {
                 InyFactory<T> factory
         ) {
             Objects.requireNonNull(identifier, "identifier");
-            requireAvailableFactoryIdentifier(identifier);
+            requireAvailableFactoryIdentifier(identifier, resultType);
             if (!factories.containsKey(identifier)) {
                 throw new IllegalArgumentException("No INY factory is registered for " + identifier);
             }
@@ -642,10 +642,13 @@ public final class Iny {
                     identifier, InyProvider.class, factory));
         }
 
-        private static void requireAvailableFactoryIdentifier(InyIdentifier identifier) {
+        private static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
             Objects.requireNonNull(identifier, "identifier");
-            if (identifier.namespace().equals("context") && !identifier.value().equals("value")) {
-                throw new IllegalArgumentException("The 'context' namespace is reserved for runtime context access");
+            Objects.requireNonNull(resultType, "resultType");
+            if (identifier.namespace().equals("context")
+                    && (!identifier.value().equals("value")
+                    || !InyProvider.class.isAssignableFrom(resultType))) {
+                throw new IllegalArgumentException("The 'context' namespace is reserved for the context:value provider");
             }
         }
     }

@@ -171,7 +171,7 @@ final class MinecraftInyRegistry {
         ensureRegistrationOpen();
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(registration, "registration");
-        requireAvailableFactoryIdentifier(registration.identifier());
+        requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
         OwnedFactoryRegistration ownedRegistration = new OwnedFactoryRegistration(owner, registration);
         if (registrations.putIfAbsent(registration.identifier(), ownedRegistration) != null) {
             throw new InyDuplicateFactoryException(registration.identifier());
@@ -191,7 +191,7 @@ final class MinecraftInyRegistry {
         ensureRegistrationOpen();
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(identifier, "identifier");
-        requireAvailableFactoryIdentifier(identifier);
+        requireAvailableFactoryIdentifier(identifier, resultType);
         if (!registrations.containsKey(identifier)) {
             throw new IllegalArgumentException("No INY factory is registered for " + identifier);
         }
@@ -415,9 +415,11 @@ final class MinecraftInyRegistry {
         }
     }
 
-    private static void requireAvailableFactoryIdentifier(InyIdentifier identifier) {
-        if (identifier.namespace().equals("context") && !identifier.value().equals("value")) {
-            throw new IllegalArgumentException("The 'context' namespace is reserved for runtime context access");
+    private static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
+        if (identifier.namespace().equals("context")
+                && (!identifier.value().equals("value")
+                || !InyProvider.class.isAssignableFrom(resultType))) {
+            throw new IllegalArgumentException("The 'context' namespace is reserved for the context:value provider");
         }
     }
 

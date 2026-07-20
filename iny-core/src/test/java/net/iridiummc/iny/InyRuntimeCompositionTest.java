@@ -283,6 +283,8 @@ class InyRuntimeCompositionTest {
     void contextNamespaceIsReservedExceptForValueAccess() {
         assertThrows(IllegalArgumentException.class,
                 () -> Iny.builder().registerFactory("context:other", String.class, context -> "bad"));
+        assertThrows(IllegalArgumentException.class,
+                () -> Iny.builder().registerFactory("context:value", String.class, context -> "bad"));
     }
 
     private static Iny captureService(AtomicReference<String> received) {
