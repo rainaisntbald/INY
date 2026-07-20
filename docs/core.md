@@ -152,7 +152,7 @@ origin: geometry:point(0, 0, 0)
 Point origin = iny.parse(source).get("origin", Point.class);
 ```
 
-Parsing stores calls unevaluated. Resolution occurs when a value is requested, and results are not cached. A missing factory therefore does not prevent parsing but fails when that call is resolved.
+Parsing stores calls unevaluated. Resolution occurs when a value is requested, and results are not cached. Factories may execute more than once for repeated reads and should normally be deterministic and free of externally visible side effects, unless intended. A missing factory therefore does not prevent parsing but fails when that call is resolved.
 
 Use a decoder for an ordinary representation such as `port: 8080`. Use a factory when the syntax should explicitly select construction, such as `origin: geometry:point(0, 0, 0)`.
 

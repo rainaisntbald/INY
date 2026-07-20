@@ -7,4 +7,3 @@ Choose the guide for the layer you are using:
 - [Language reference](iny.md) — INY syntax, values, lists, sections, and factory-call expressions.
 
 The guides describe workflows and recommended ownership. Javadocs remain the reference for individual types, methods, exceptions, and accessors.
-[]()

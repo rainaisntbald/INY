@@ -136,14 +136,14 @@ Typed numeric reads are strict. For example, a fractional value cannot become an
 
 The shared service installs these factory calls:
 
-| Call | Result | Arguments |
-| --- | --- | --- |
-| `minecraft:world` | `World` | world name |
-| `minecraft:material` | `Material` | material name |
-| `minecraft:vector` | `Vector` | x, y, z |
-| `minecraft:location` | `Location` | world, x, y, z, optional yaw, optional pitch |
-| `minecraft:block` | `Block` | world, integer x, integer y, integer z |
-| `minecraft:item_stack` | `ItemStack` | material name, count |
+| Call                   | Result      | Arguments                                    |
+|------------------------|-------------|----------------------------------------------|
+| `minecraft:world`      | `World`     | world name                                   |
+| `minecraft:material`   | `Material`  | material name                                |
+| `minecraft:vector`     | `Vector`    | x, y, z                                      |
+| `minecraft:location`   | `Location`  | world, x, y, z, optional yaw, optional pitch |
+| `minecraft:block`      | `Block`     | world, integer x, integer y, integer z       |
+| `minecraft:item_stack` | `ItemStack` | material name, count (optional)              |
 
 For example:
 
@@ -199,7 +199,7 @@ daily: rewards:reward("rewards.daily", 250)
 Reward reward = config.get("daily", Reward.class);
 ```
 
-The owner argument is significant. If Bukkit disables the provider, INY removes all factories owned by it from the live registry snapshot. Consumers depend on INY, not directly on the provider plugin.
+The owner argument is significant. If Bukkit disables the provider, INY removes all factories owned by it from the live registry snapshot. Consumers typically depend on INY without directly depending on the provider plugin.
 
 ### Design factory arguments deliberately
 
@@ -227,7 +227,7 @@ Duplicate identifiers fail immediately. Use `replaceFactory` only when replaceme
 
 ## Delay readiness for an integration
 
-Use a readiness blocker when your factories depend on another plugin's asynchronous startup work:
+Use a readiness blocker when your factories depend on any plugin's asynchronous startup work:
 
 ```java
 private ReadinessBlocker itemData;
@@ -257,7 +257,7 @@ Choose `CONTINUE_WITH_WARNING` when degraded operation is valid. Choose `FAIL_RE
 
 - Register factories and blockers synchronously during `onEnable()`.
 - Consume configuration only from `InyReadyEvent` or `onInyReady`.
-- Retain `InyConfig`; it is immutable, while factory calls use the current registry snapshot when resolved.
+- `InyConfig` retains immutable parsed data, but factory calls are resolved against the registry snapshot current at the time of each read. Results are not cached.
 - Keep Bukkit thread-affinity rules in mind for objects returned by Minecraft or plugin factories.
 - Treat `net.iridiummc.iny.internal.*` and the Minecraft implementation package as unsupported implementation details.
 - Use the [language reference](iny.md) for file syntax and the Javadocs for exhaustive method and exception details.
