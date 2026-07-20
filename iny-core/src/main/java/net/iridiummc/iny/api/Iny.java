@@ -21,6 +21,7 @@ import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
 import net.iridiummc.iny.internal.parser.Parser;
 import net.iridiummc.iny.internal.source.SourceLoading;
+import net.iridiummc.iny.internal.runtime.ImmutableInyContextKeyRegistry;
 import net.iridiummc.iny.internal.value.InyBoolean;
 import net.iridiummc.iny.internal.value.InyCall;
 import net.iridiummc.iny.internal.value.InyDecimal;
@@ -31,6 +32,8 @@ import net.iridiummc.iny.internal.value.InySectionValue;
 import net.iridiummc.iny.internal.value.InyString;
 import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.source.InySource;
+import net.iridiummc.iny.runtime.InyContextKey;
+import net.iridiummc.iny.runtime.InyContextKeyRegistry;
 import net.iridiummc.iny.value.InySection;
 
 import java.io.Reader;
@@ -51,6 +54,7 @@ public final class Iny {
 
     private final InyDecoderRegistry decoders;
     private final Supplier<InyFactoryRegistry> factories;
+    private final InyContextKeyRegistry contextKeys;
     private final InyValueAccess values = new InyValueAccess() {
         @Override
         public <T> T resolve(Object value, Class<T> type, String path) {
@@ -63,13 +67,22 @@ public final class Iny {
         }
     };
 
-    private Iny(InyDecoderRegistry decoders, InyFactoryRegistry factories) {
-        this(decoders, () -> factories);
+    private Iny(
+            InyDecoderRegistry decoders,
+            InyFactoryRegistry factories,
+            InyContextKeyRegistry contextKeys
+    ) {
+        this(decoders, () -> factories, contextKeys);
     }
 
-    private Iny(InyDecoderRegistry decoders, Supplier<InyFactoryRegistry> factories) {
+    private Iny(
+            InyDecoderRegistry decoders,
+            Supplier<InyFactoryRegistry> factories,
+            InyContextKeyRegistry contextKeys
+    ) {
         this.decoders = decoders;
         this.factories = Objects.requireNonNull(factories, "factories");
+        this.contextKeys = Objects.requireNonNull(contextKeys, "contextKeys");
     }
 
     /**
@@ -164,6 +177,11 @@ public final class Iny {
         return Objects.requireNonNull(factories.get(), "factory registry source returned null");
     }
 
+    /** Returns the immutable runtime context-key registry used by this service. */
+    public InyContextKeyRegistry contextKeys() {
+        return contextKeys;
+    }
+
     /**
      * Creates a service sharing this service's decoders while obtaining factory snapshots from a caller-owned source.
      * This advanced hook supports lifecycle-scoped adapters; ordinary standalone services should use {@link #builder()}.
@@ -172,7 +190,7 @@ public final class Iny {
      * @return a service backed by the supplied factory registry source
      */
     public Iny withFactoryRegistry(Supplier<InyFactoryRegistry> factoryRegistrySource) {
-        return new Iny(decoders, Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"));
+        return new Iny(decoders, Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"), contextKeys);
     }
 
     /** Resolves calls through the factory registry and ordinary values through decoders. */
@@ -318,6 +336,7 @@ public final class Iny {
 
         private final Map<Class<?>, InyDecoder<?>> decoders = new LinkedHashMap<>();
         private final Map<InyIdentifier, InyFactoryRegistration<?>> factories = new LinkedHashMap<>();
+        private final Map<InyIdentifier, InyContextKey<?>> contextKeys = new LinkedHashMap<>();
 
         private Builder() {
             BuiltInDecoders.install(decoders);
@@ -353,6 +372,36 @@ public final class Iny {
                 throw new IllegalArgumentException("No decoder is registered for " + targetType.getTypeName());
             }
             decoders.put(targetType, decoder);
+            return this;
+        }
+
+        /** Registers a typed runtime context key, rejecting duplicate identifiers. */
+        public Builder registerContextKey(InyContextKey<?> key) {
+            Objects.requireNonNull(key, "key");
+            InyContextKey<?> existing = contextKeys.putIfAbsent(key.identifier(), key);
+            if (existing != null) {
+                if (!existing.type().equals(key.type())) {
+                    throw ImmutableInyContextKeyRegistry.incompatible(
+                            key.identifier(), existing.type(), key.type());
+                }
+                throw new IllegalArgumentException("A runtime context key is already registered for "
+                        + key.identifier());
+            }
+            return this;
+        }
+
+        /** Explicitly replaces an existing context key while preserving identifier/type consistency. */
+        public Builder replaceContextKey(InyContextKey<?> key) {
+            Objects.requireNonNull(key, "key");
+            InyContextKey<?> existing = contextKeys.get(key.identifier());
+            if (existing == null) {
+                throw new IllegalArgumentException("No runtime context key is registered for " + key.identifier());
+            }
+            if (!existing.type().equals(key.type())) {
+                throw ImmutableInyContextKeyRegistry.incompatible(
+                        key.identifier(), existing.type(), key.type());
+            }
+            contextKeys.put(key.identifier(), key);
             return this;
         }
 
@@ -452,7 +501,10 @@ public final class Iny {
          * @return the configured immutable service
          */
         public Iny build() {
-            return new Iny(new InyDecoderRegistry(decoders), new InyFactoryRegistry(factories));
+            return new Iny(
+                    new InyDecoderRegistry(decoders),
+                    new InyFactoryRegistry(factories),
+                    new ImmutableInyContextKeyRegistry(contextKeys));
         }
     }
 }
