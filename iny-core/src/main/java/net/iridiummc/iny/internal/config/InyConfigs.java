@@ -9,6 +9,7 @@ import net.iridiummc.iny.internal.value.InyList;
 import net.iridiummc.iny.internal.value.InySectionValue;
 import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.value.InySection;
+import net.iridiummc.iny.runtime.InyProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -87,6 +88,14 @@ public final class InyConfigs {
         @Override
         public InySection getSection(String path) {
             return get(path, InySection.class);
+        }
+
+        @Override
+        public <T> InyProvider<T> getProvider(String path, Class<T> targetType) {
+            Objects.requireNonNull(targetType, "targetType");
+            String fullPath = fullPath(path);
+            InyValue value = resolve(path, fullPath, true).orElseThrow();
+            return values.provider(value, targetType, fullPath);
         }
 
         @Override

@@ -3,6 +3,10 @@ package net.iridiummc.iny.value;
 import net.iridiummc.iny.exception.InyInvalidPathException;
 import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
+import net.iridiummc.iny.exception.InyInvalidProviderResultException;
+import net.iridiummc.iny.exception.InyNotProviderException;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -110,6 +114,34 @@ public interface InySection {
         return get(path, InySection.class);
     }
 
+    /** Returns a required deferred action without executing it. */
+    default InyRunnable getRunnable(String path) {
+        return get(path, InyRunnable.class);
+    }
+
+    /**
+     * Returns a checked deferred provider. Plain values become constant providers; actions are rejected.
+     */
+    default <T> InyProvider<T> getProvider(String path, Class<T> targetType) {
+        Objects.requireNonNull(targetType, "targetType");
+        Object value = get(path);
+        if (value instanceof InyProvider<?> provider) {
+            return runtime -> checkedProviderResult(
+                    path, provider.resolve(Objects.requireNonNull(runtime, "runtime context")), targetType);
+        }
+        if (value instanceof InyRunnable runnable) {
+            throw new InyNotProviderException(path, targetType, runnable.getClass());
+        }
+        T constant = get(path, targetType);
+        if (constant == null) {
+            throw new InyInvalidProviderResultException(path, targetType, null);
+        }
+        return runtime -> {
+            Objects.requireNonNull(runtime, "runtime context");
+            return constant;
+        };
+    }
+
     /**
      * Returns a required immutable list of ordinary Java values at a relative dotted path.
      *
@@ -157,6 +189,16 @@ public interface InySection {
         }
         @SuppressWarnings("unchecked")
         T cast = (T) value;
+        return cast;
+    }
+
+    private static <T> T checkedProviderResult(String path, Object result, Class<T> type) {
+        Class<?> boxedType = boxed(type);
+        if (result == null || !boxedType.isInstance(result)) {
+            throw new InyInvalidProviderResultException(path, type, result);
+        }
+        @SuppressWarnings("unchecked")
+        T cast = (T) result;
         return cast;
     }
 

@@ -1,5 +1,8 @@
 package net.iridiummc.iny.factory;
 
+import net.iridiummc.iny.runtime.InyContextKeyRegistry;
+import net.iridiummc.iny.runtime.InyProvider;
+
 import java.util.Optional;
 
 /** Typed positional access to the arguments of one factory call. */
@@ -50,6 +53,27 @@ public interface InyArguments {
      * @return the decoded argument or {@code defaultValue}
      */
     <T> T getOrDefault(int index, Class<T> type, T defaultValue);
+
+    /**
+     * Returns one argument as a deferred provider. Implementations lift static values and preserve providers.
+     *
+     * @param index zero-based argument index
+     * @param targetType requested provider result type
+     * @param <T> provider result type
+     * @return a checked deferred provider
+     */
+    default <T> InyProvider<T> getProvider(int index, Class<T> targetType) {
+        throw new UnsupportedOperationException("This InyArguments implementation does not support providers");
+    }
+
+    /**
+     * Returns the immutable context-key registry visible to this factory invocation.
+     *
+     * @return registered runtime context keys
+     */
+    default InyContextKeyRegistry contextKeys() {
+        throw new UnsupportedOperationException("This InyArguments implementation does not expose context keys");
+    }
 
     /**
      * Requires an exact argument count.

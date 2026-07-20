@@ -4,6 +4,8 @@ import net.iridiummc.iny.exception.InyArgumentCountException;
 import net.iridiummc.iny.exception.InyFactoryArgumentException;
 import net.iridiummc.iny.factory.InyArguments;
 import net.iridiummc.iny.internal.value.InyValue;
+import net.iridiummc.iny.runtime.InyContextKeyRegistry;
+import net.iridiummc.iny.runtime.InyProvider;
 
 import java.util.List;
 import java.util.Objects;
@@ -65,6 +67,31 @@ final class DefaultInyArguments implements InyArguments {
     }
 
     @Override
+    public <T> InyProvider<T> getProvider(int index, Class<T> targetType) {
+        Objects.requireNonNull(targetType, "targetType");
+        InyValue value = checkedValue(index, targetType);
+        String argumentPath = context.path() + "[" + index + "]";
+        final InyProvider<T> provider;
+        try {
+            provider = context.values().provider(value, targetType, argumentPath);
+        } catch (RuntimeException exception) {
+            throw argumentFailure(index, targetType, value, exception);
+        }
+        return runtime -> {
+            try {
+                return provider.resolve(runtime);
+            } catch (RuntimeException exception) {
+                throw argumentFailure(index, targetType, value, exception);
+            }
+        };
+    }
+
+    @Override
+    public InyContextKeyRegistry contextKeys() {
+        return context.iny().contextKeys();
+    }
+
+    @Override
     public void requireCount(int count) {
         requireCountBetween(count, count);
     }
@@ -96,6 +123,22 @@ final class DefaultInyArguments implements InyArguments {
                 "missing",
                 "argument index is outside the available range 0 to " + Math.max(-1, values.size() - 1),
                 null);
+    }
+
+    private InyFactoryArgumentException argumentFailure(
+            int index,
+            Class<?> requestedType,
+            InyValue value,
+            RuntimeException exception
+    ) {
+        return new InyFactoryArgumentException(
+                context.path(),
+                context.identifier(),
+                index,
+                requestedType,
+                value.actualType(),
+                "provider argument resolution failed: " + describe(exception),
+                exception);
     }
 
     private static String describe(RuntimeException exception) {

@@ -4,6 +4,8 @@ import net.iridiummc.iny.codec.InyDecodeContext;
 import net.iridiummc.iny.codec.InyDecoder;
 import net.iridiummc.iny.codec.InyDecoderRegistry;
 import net.iridiummc.iny.exception.InyMissingDecoderException;
+import net.iridiummc.iny.exception.InyInvalidProviderResultException;
+import net.iridiummc.iny.exception.InyNotProviderException;
 import net.iridiummc.iny.exception.InyDuplicateFactoryException;
 import net.iridiummc.iny.exception.InyFactoryExecutionException;
 import net.iridiummc.iny.exception.InyFactoryException;
@@ -66,6 +68,11 @@ public final class Iny {
         @Override
         public <T> T decode(Object value, Class<T> type, String path) {
             return decodeValue(value, type, path);
+        }
+
+        @Override
+        public <T> InyProvider<T> provider(Object value, Class<T> type, String path) {
+            return providerValue(value, type, path);
         }
     };
 
@@ -246,6 +253,41 @@ public final class Iny {
         return decodeJavaValue(value, type, path, describeJavaType(value));
     }
 
+    /** Lifts a configured value into a checked runtime provider. */
+    private <T> InyProvider<T> providerValue(Object value, Class<T> type, String path) {
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(path, "path");
+        Object resolved = resolveValue(value, Object.class, path);
+        if (resolved instanceof InyProvider<?> provider) {
+            return runtime -> {
+                Objects.requireNonNull(runtime, "runtime context");
+                Object result = provider.resolve(runtime);
+                return checkedProviderResult(path, result, type);
+            };
+        }
+        if (resolved instanceof InyRunnable runnable) {
+            throw new InyNotProviderException(path, type, runnable.getClass());
+        }
+        T constant = decodeValue(resolved, type, path);
+        if (constant == null) {
+            throw new InyInvalidProviderResultException(path, type, null);
+        }
+        return runtime -> {
+            Objects.requireNonNull(runtime, "runtime context");
+            return constant;
+        };
+    }
+
+    private static <T> T checkedProviderResult(String path, Object result, Class<T> type) {
+        Class<?> boxedType = boxed(type);
+        if (result == null || !boxedType.isInstance(result)) {
+            throw new InyInvalidProviderResultException(path, type, result);
+        }
+        @SuppressWarnings("unchecked")
+        T cast = (T) result;
+        return cast;
+    }
+
     private <T> T decodeInternalValue(InyValue value, Class<T> type, String path) {
         Object javaValue = toJavaValue(value, path);
         return decodeJavaValue(javaValue, type, path, describeJavaType(javaValue));
@@ -421,6 +463,7 @@ public final class Iny {
                 Class<T> resultType,
                 InyFactory<T> factory
         ) {
+            requireAvailableFactoryIdentifier(identifier);
             return registerFactory(new InyFactoryRegistration<>(identifier, resultType, factory));
         }
 
@@ -473,6 +516,7 @@ public final class Iny {
          */
         public Builder registerFactory(InyFactoryRegistration<?> registration) {
             Objects.requireNonNull(registration, "registration");
+            requireAvailableFactoryIdentifier(registration.identifier());
             if (factories.putIfAbsent(registration.identifier(), registration) != null) {
                 throw new InyDuplicateFactoryException(registration.identifier());
             }
@@ -494,6 +538,7 @@ public final class Iny {
                 InyFactory<T> factory
         ) {
             Objects.requireNonNull(identifier, "identifier");
+            requireAvailableFactoryIdentifier(identifier);
             if (!factories.containsKey(identifier)) {
                 throw new IllegalArgumentException("No INY factory is registered for " + identifier);
             }
@@ -559,10 +604,35 @@ public final class Iny {
          * @return the configured immutable service
          */
         public Iny build() {
+            installContextValueFactory();
             return new Iny(
                     new InyDecoderRegistry(decoders),
                     new InyFactoryRegistry(factories),
                     new ImmutableInyContextKeyRegistry(contextKeys));
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private void installContextValueFactory() {
+            InyIdentifier identifier = InyIdentifier.parse("context:value");
+            if (contextKeys.isEmpty() || factories.containsKey(identifier)) {
+                return;
+            }
+            InyFactory<InyProvider<Object>> factory = context -> {
+                context.arguments().requireCount(1);
+                InyIdentifier keyIdentifier = InyIdentifier.parse(
+                        context.arguments().get(0, String.class));
+                InyContextKey<?> key = context.arguments().contextKeys().require(keyIdentifier);
+                return runtime -> Objects.requireNonNull(runtime, "runtime context").getUnchecked(key);
+            };
+            factories.put(identifier, new InyFactoryRegistration(
+                    identifier, InyProvider.class, factory));
+        }
+
+        private static void requireAvailableFactoryIdentifier(InyIdentifier identifier) {
+            Objects.requireNonNull(identifier, "identifier");
+            if (identifier.namespace().equals("context") && !identifier.value().equals("value")) {
+                throw new IllegalArgumentException("The 'context' namespace is reserved for runtime context access");
+            }
         }
     }
 }
