@@ -34,6 +34,8 @@ import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.runtime.InyContextKey;
 import net.iridiummc.iny.runtime.InyContextKeyRegistry;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
 import net.iridiummc.iny.value.InySection;
 
 import java.io.Reader;
@@ -435,6 +437,34 @@ public final class Iny {
             return registerFactory(InyIdentifier.parse(identifier), resultType, factory);
         }
 
+        /** Registers a factory that constructs deferred actions. */
+        public Builder registerRunnable(
+                InyIdentifier identifier,
+                InyFactory<InyRunnable> factory
+        ) {
+            return registerFactory(identifier, InyRunnable.class, factory);
+        }
+
+        /** Registers a deferred-action factory using a canonical identifier string. */
+        public Builder registerRunnable(String identifier, InyFactory<InyRunnable> factory) {
+            return registerRunnable(InyIdentifier.parse(identifier), factory);
+        }
+
+        /** Registers a factory that constructs deferred value providers. */
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public <T> Builder registerProvider(
+                InyIdentifier identifier,
+                InyFactory<InyProvider<T>> factory
+        ) {
+            Objects.requireNonNull(factory, "factory");
+            return registerFactory(identifier, (Class) InyProvider.class, (InyFactory) factory);
+        }
+
+        /** Registers a deferred-value factory using a canonical identifier string. */
+        public <T> Builder registerProvider(String identifier, InyFactory<InyProvider<T>> factory) {
+            return registerProvider(InyIdentifier.parse(identifier), factory);
+        }
+
         /**
          * Registers an advanced immutable registration, rejecting duplicate identifiers.
          *
@@ -482,6 +512,34 @@ public final class Iny {
          */
         public <T> Builder replaceFactory(String identifier, Class<T> resultType, InyFactory<T> factory) {
             return replaceFactory(InyIdentifier.parse(identifier), resultType, factory);
+        }
+
+        /** Explicitly replaces a deferred-action factory. */
+        public Builder replaceRunnable(
+                InyIdentifier identifier,
+                InyFactory<InyRunnable> factory
+        ) {
+            return replaceFactory(identifier, InyRunnable.class, factory);
+        }
+
+        /** Explicitly replaces a deferred-action factory using a canonical identifier string. */
+        public Builder replaceRunnable(String identifier, InyFactory<InyRunnable> factory) {
+            return replaceRunnable(InyIdentifier.parse(identifier), factory);
+        }
+
+        /** Explicitly replaces a deferred-value factory. */
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public <T> Builder replaceProvider(
+                InyIdentifier identifier,
+                InyFactory<InyProvider<T>> factory
+        ) {
+            Objects.requireNonNull(factory, "factory");
+            return replaceFactory(identifier, (Class) InyProvider.class, (InyFactory) factory);
+        }
+
+        /** Explicitly replaces a deferred-value factory using a canonical identifier string. */
+        public <T> Builder replaceProvider(String identifier, InyFactory<InyProvider<T>> factory) {
+            return replaceProvider(InyIdentifier.parse(identifier), factory);
         }
 
         /**
