@@ -6,6 +6,10 @@ import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
 import net.iridiummc.iny.readiness.Readiness;
+import net.iridiummc.iny.runtime.InyContextKey;
+import net.iridiummc.iny.runtime.InyContextKeyRegistry;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -178,6 +182,48 @@ public final class INY extends JavaPlugin implements Listener {
         return this;
     }
 
+    /** Registers a deferred action owned by the providing plugin. */
+    public INY registerRunnable(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyRunnable> factory
+    ) {
+        registry().registerRunnable(owner, identifier, factory);
+        return this;
+    }
+
+    /** Registers a deferred action under a canonical identifier. */
+    public INY registerRunnable(Plugin owner, String identifier, InyFactory<InyRunnable> factory) {
+        registry().registerRunnable(owner, identifier, factory);
+        return this;
+    }
+
+    /** Registers a deferred value provider owned by the providing plugin. */
+    public <T> INY registerProvider(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        registry().registerProvider(owner, identifier, factory);
+        return this;
+    }
+
+    /** Registers a deferred value provider under a canonical identifier. */
+    public <T> INY registerProvider(
+            Plugin owner,
+            String identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        registry().registerProvider(owner, identifier, factory);
+        return this;
+    }
+
+    /** Registers a typed runtime context key owned by the providing plugin. */
+    public INY registerContextKey(Plugin owner, InyContextKey<?> key) {
+        registry().registerContextKey(owner, key);
+        return this;
+    }
+
     /**
      * Replaces a factory and transfers its ownership while startup registration remains open.
      *
@@ -195,6 +241,48 @@ public final class INY extends JavaPlugin implements Listener {
             InyFactory<T> factory
     ) {
         registry().replaceFactory(owner, identifier, resultType, factory);
+        return this;
+    }
+
+    /** Replaces a deferred action and transfers ownership to the providing plugin. */
+    public INY replaceRunnable(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyRunnable> factory
+    ) {
+        registry().replaceRunnable(owner, identifier, factory);
+        return this;
+    }
+
+    /** Replaces a deferred action by canonical identifier and transfers ownership. */
+    public INY replaceRunnable(Plugin owner, String identifier, InyFactory<InyRunnable> factory) {
+        registry().replaceRunnable(owner, identifier, factory);
+        return this;
+    }
+
+    /** Replaces a deferred value provider and transfers ownership. */
+    public <T> INY replaceProvider(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        registry().replaceProvider(owner, identifier, factory);
+        return this;
+    }
+
+    /** Replaces a deferred value provider by canonical identifier and transfers ownership. */
+    public <T> INY replaceProvider(
+            Plugin owner,
+            String identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        registry().replaceProvider(owner, identifier, factory);
+        return this;
+    }
+
+    /** Replaces a typed runtime context key and transfers ownership without changing its type. */
+    public INY replaceContextKey(Plugin owner, InyContextKey<?> key) {
+        registry().replaceContextKey(owner, key);
         return this;
     }
 
@@ -225,6 +313,11 @@ public final class INY extends JavaPlugin implements Listener {
      */
     public InyFactoryRegistry factories() {
         return registry().factories();
+    }
+
+    /** Returns the sealed immutable runtime context-key snapshot after readiness. */
+    public InyContextKeyRegistry contextKeys() {
+        return registry().contextKeys();
     }
 
     @Override

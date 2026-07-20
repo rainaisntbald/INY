@@ -58,7 +58,7 @@ public final class Iny {
 
     private final InyDecoderRegistry decoders;
     private final Supplier<InyFactoryRegistry> factories;
-    private final InyContextKeyRegistry contextKeys;
+    private final Supplier<InyContextKeyRegistry> contextKeys;
     private final InyValueAccess values = new InyValueAccess() {
         @Override
         public <T> T resolve(Object value, Class<T> type, String path) {
@@ -81,13 +81,13 @@ public final class Iny {
             InyFactoryRegistry factories,
             InyContextKeyRegistry contextKeys
     ) {
-        this(decoders, () -> factories, contextKeys);
+        this(decoders, () -> factories, () -> contextKeys);
     }
 
     private Iny(
             InyDecoderRegistry decoders,
             Supplier<InyFactoryRegistry> factories,
-            InyContextKeyRegistry contextKeys
+            Supplier<InyContextKeyRegistry> contextKeys
     ) {
         this.decoders = decoders;
         this.factories = Objects.requireNonNull(factories, "factories");
@@ -188,7 +188,7 @@ public final class Iny {
 
     /** Returns the immutable runtime context-key registry used by this service. */
     public InyContextKeyRegistry contextKeys() {
-        return contextKeys;
+        return Objects.requireNonNull(contextKeys.get(), "context key registry source returned null");
     }
 
     /**
@@ -200,6 +200,20 @@ public final class Iny {
      */
     public Iny withFactoryRegistry(Supplier<InyFactoryRegistry> factoryRegistrySource) {
         return new Iny(decoders, Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"), contextKeys);
+    }
+
+    /**
+     * Creates a service sharing its decoders while obtaining live immutable factory and context-key snapshots.
+     * This advanced hook is intended for lifecycle-scoped adapters.
+     */
+    public Iny withRegistries(
+            Supplier<InyFactoryRegistry> factoryRegistrySource,
+            Supplier<InyContextKeyRegistry> contextKeyRegistrySource
+    ) {
+        return new Iny(
+                decoders,
+                Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"),
+                Objects.requireNonNull(contextKeyRegistrySource, "contextKeyRegistrySource"));
     }
 
     /** Resolves calls through the factory registry and ordinary values through decoders. */

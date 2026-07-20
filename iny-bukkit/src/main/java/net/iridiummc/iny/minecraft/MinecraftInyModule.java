@@ -3,6 +3,7 @@ package net.iridiummc.iny.minecraft;
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyModule;
 import net.iridiummc.iny.factory.InyFactoryContext;
+import net.iridiummc.iny.MinecraftContextKeys;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -29,6 +30,9 @@ public final class MinecraftInyModule implements InyModule {
 
     @Override
     public void configure(Iny.Builder builder) {
+        builder.registerContextKey(MinecraftContextKeys.PLAYER);
+        builder.registerContextKey(MinecraftContextKeys.LOCATION);
+        builder.registerContextKey(MinecraftContextKeys.WORLD);
         builder.registerFactory("minecraft:world", World.class, this::worldFactory);
         builder.registerFactory("minecraft:material", Material.class, this::materialFactory);
         builder.registerFactory("minecraft:vector", Vector.class, this::vectorFactory);

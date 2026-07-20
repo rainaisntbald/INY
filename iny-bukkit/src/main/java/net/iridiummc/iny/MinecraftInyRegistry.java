@@ -11,6 +11,10 @@ import net.iridiummc.iny.factory.InyFactoryRegistry;
 import net.iridiummc.iny.minecraft.MinecraftInyModule;
 import net.iridiummc.iny.readiness.Readiness;
 import net.iridiummc.iny.readiness.ReadinessState;
+import net.iridiummc.iny.runtime.InyContextKey;
+import net.iridiummc.iny.runtime.InyContextKeyRegistry;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
@@ -31,7 +35,9 @@ final class MinecraftInyRegistry {
 
     private final Plugin plugin;
     private final Map<InyIdentifier, OwnedFactoryRegistration> registrations;
+    private final Map<InyIdentifier, OwnedContextKeyRegistration> contextKeyRegistrations;
     private final AtomicReference<InyFactoryRegistry> factorySnapshot;
+    private final AtomicReference<InyContextKeyRegistry> contextKeySnapshot;
     private final Iny iny;
     private final ReadinessController readiness;
     private boolean active = true;
@@ -49,8 +55,12 @@ final class MinecraftInyRegistry {
         this.registrations = new LinkedHashMap<>();
         base.factories().registrations().forEach((identifier, registration) ->
                 registrations.put(identifier, new OwnedFactoryRegistration(plugin, registration)));
+        this.contextKeyRegistrations = new LinkedHashMap<>();
+        base.contextKeys().entries().forEach((identifier, key) ->
+                contextKeyRegistrations.put(identifier, new OwnedContextKeyRegistration(plugin, key)));
         this.factorySnapshot = new AtomicReference<>(base.factories());
-        this.iny = base.withFactoryRegistry(this::activeFactorySnapshot);
+        this.contextKeySnapshot = new AtomicReference<>(base.contextKeys());
+        this.iny = base.withRegistries(this::activeFactorySnapshot, this::activeContextKeySnapshot);
         this.readiness = new ReadinessController(plugin, new BukkitReadinessScheduler(plugin), readyAction);
         this.readiness.openRegistration();
     }
@@ -89,6 +99,11 @@ final class MinecraftInyRegistry {
         return activeFactorySnapshot();
     }
 
+    /** Returns the current immutable runtime context-key snapshot. */
+    public InyContextKeyRegistry contextKeys() {
+        return activeContextKeySnapshot();
+    }
+
     /** Registers a factory owned by a plugin in this server's shared registry. */
     public synchronized <T> MinecraftInyRegistry registerFactory(
             Plugin owner,
@@ -109,6 +124,44 @@ final class MinecraftInyRegistry {
         return registerFactory(owner, InyIdentifier.parse(identifier), resultType, factory);
     }
 
+    /** Registers a plugin-owned deferred-action factory. */
+    public MinecraftInyRegistry registerRunnable(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyRunnable> factory
+    ) {
+        return registerFactory(owner, identifier, InyRunnable.class, factory);
+    }
+
+    /** Registers a plugin-owned deferred-action factory by canonical identifier. */
+    public MinecraftInyRegistry registerRunnable(
+            Plugin owner,
+            String identifier,
+            InyFactory<InyRunnable> factory
+    ) {
+        return registerRunnable(owner, InyIdentifier.parse(identifier), factory);
+    }
+
+    /** Registers a plugin-owned deferred-value factory. */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public <T> MinecraftInyRegistry registerProvider(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        Objects.requireNonNull(factory, "factory");
+        return registerFactory(owner, identifier, (Class) InyProvider.class, (InyFactory) factory);
+    }
+
+    /** Registers a plugin-owned deferred-value factory by canonical identifier. */
+    public <T> MinecraftInyRegistry registerProvider(
+            Plugin owner,
+            String identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        return registerProvider(owner, InyIdentifier.parse(identifier), factory);
+    }
+
     /** Registers an advanced plugin-owned registration, rejecting duplicate identifiers. */
     public synchronized MinecraftInyRegistry registerFactory(
             Plugin owner,
@@ -118,6 +171,7 @@ final class MinecraftInyRegistry {
         ensureRegistrationOpen();
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(registration, "registration");
+        requireAvailableFactoryIdentifier(registration.identifier());
         OwnedFactoryRegistration ownedRegistration = new OwnedFactoryRegistration(owner, registration);
         if (registrations.putIfAbsent(registration.identifier(), ownedRegistration) != null) {
             throw new InyDuplicateFactoryException(registration.identifier());
@@ -137,6 +191,7 @@ final class MinecraftInyRegistry {
         ensureRegistrationOpen();
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(identifier, "identifier");
+        requireAvailableFactoryIdentifier(identifier);
         if (!registrations.containsKey(identifier)) {
             throw new IllegalArgumentException("No INY factory is registered for " + identifier);
         }
@@ -154,6 +209,81 @@ final class MinecraftInyRegistry {
             InyFactory<T> factory
     ) {
         return replaceFactory(owner, InyIdentifier.parse(identifier), resultType, factory);
+    }
+
+    /** Replaces a deferred-action factory and transfers ownership. */
+    public MinecraftInyRegistry replaceRunnable(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyRunnable> factory
+    ) {
+        return replaceFactory(owner, identifier, InyRunnable.class, factory);
+    }
+
+    /** Replaces a deferred-action factory by canonical identifier and transfers ownership. */
+    public MinecraftInyRegistry replaceRunnable(
+            Plugin owner,
+            String identifier,
+            InyFactory<InyRunnable> factory
+    ) {
+        return replaceRunnable(owner, InyIdentifier.parse(identifier), factory);
+    }
+
+    /** Replaces a deferred-value factory and transfers ownership. */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public <T> MinecraftInyRegistry replaceProvider(
+            Plugin owner,
+            InyIdentifier identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        Objects.requireNonNull(factory, "factory");
+        return replaceFactory(owner, identifier, (Class) InyProvider.class, (InyFactory) factory);
+    }
+
+    /** Replaces a deferred-value factory by canonical identifier and transfers ownership. */
+    public <T> MinecraftInyRegistry replaceProvider(
+            Plugin owner,
+            String identifier,
+            InyFactory<InyProvider<T>> factory
+    ) {
+        return replaceProvider(owner, InyIdentifier.parse(identifier), factory);
+    }
+
+    /** Registers a typed runtime context key owned by a plugin. */
+    public synchronized MinecraftInyRegistry registerContextKey(Plugin owner, InyContextKey<?> key) {
+        ensureActive();
+        ensureRegistrationOpen();
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(key, "key");
+        OwnedContextKeyRegistration existing = contextKeyRegistrations.get(key.identifier());
+        if (existing != null) {
+            if (!existing.key().type().equals(key.type())) {
+                throw incompatibleContextKey(existing.key(), key);
+            }
+            throw new IllegalArgumentException("A runtime context key is already registered for "
+                    + key.identifier());
+        }
+        contextKeyRegistrations.put(key.identifier(), new OwnedContextKeyRegistration(owner, key));
+        publishContextKeySnapshot();
+        return this;
+    }
+
+    /** Replaces a typed runtime context key and transfers ownership without changing its type. */
+    public synchronized MinecraftInyRegistry replaceContextKey(Plugin owner, InyContextKey<?> key) {
+        ensureActive();
+        ensureRegistrationOpen();
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(key, "key");
+        OwnedContextKeyRegistration existing = contextKeyRegistrations.get(key.identifier());
+        if (existing == null) {
+            throw new IllegalArgumentException("No runtime context key is registered for " + key.identifier());
+        }
+        if (!existing.key().type().equals(key.type())) {
+            throw incompatibleContextKey(existing.key(), key);
+        }
+        contextKeyRegistrations.put(key.identifier(), new OwnedContextKeyRegistration(owner, key));
+        publishContextKeySnapshot();
+        return this;
     }
 
     /** Parses through the shared server service. */
@@ -228,8 +358,13 @@ final class MinecraftInyRegistry {
         }
         boolean removed = registrations.entrySet().removeIf(entry ->
                 entry.getValue().owner() == disabledPlugin);
+        boolean contextKeysRemoved = contextKeyRegistrations.entrySet().removeIf(entry ->
+                entry.getValue().owner() == disabledPlugin);
         if (removed) {
             publishSnapshot();
+        }
+        if (contextKeysRemoved) {
+            publishContextKeySnapshot();
         }
         readiness.handlePluginDisable(disabledPlugin);
     }
@@ -241,9 +376,21 @@ final class MinecraftInyRegistry {
         factorySnapshot.set(new InyFactoryRegistry(snapshot));
     }
 
+    private void publishContextKeySnapshot() {
+        Map<InyIdentifier, InyContextKey<?>> snapshot = new LinkedHashMap<>();
+        contextKeyRegistrations.forEach((identifier, registration) ->
+                snapshot.put(identifier, registration.key()));
+        contextKeySnapshot.set(InyContextKeyRegistry.copyOf(snapshot));
+    }
+
     private InyFactoryRegistry activeFactorySnapshot() {
         ensureReady();
         return factorySnapshot.get();
+    }
+
+    private InyContextKeyRegistry activeContextKeySnapshot() {
+        ensureReady();
+        return contextKeySnapshot.get();
     }
 
     private synchronized void ensureActive() {
@@ -266,6 +413,21 @@ final class MinecraftInyRegistry {
             throw new IllegalStateException(
                     "INY factory registration is closed; factories must be registered during the startup registration phase");
         }
+    }
+
+    private static void requireAvailableFactoryIdentifier(InyIdentifier identifier) {
+        if (identifier.namespace().equals("context") && !identifier.value().equals("value")) {
+            throw new IllegalArgumentException("The 'context' namespace is reserved for runtime context access");
+        }
+    }
+
+    private static IllegalArgumentException incompatibleContextKey(
+            InyContextKey<?> existing,
+            InyContextKey<?> replacement
+    ) {
+        return new IllegalArgumentException("Context key '" + replacement.identifier()
+                + "' is already registered as " + existing.type().getTypeName()
+                + " and cannot also use " + replacement.type().getTypeName());
     }
 
     private static Path validateResourcePath(String resourcePath) {
@@ -293,6 +455,13 @@ final class MinecraftInyRegistry {
         private OwnedFactoryRegistration {
             Objects.requireNonNull(owner, "owner");
             Objects.requireNonNull(registration, "registration");
+        }
+    }
+
+    private record OwnedContextKeyRegistration(Plugin owner, InyContextKey<?> key) {
+        private OwnedContextKeyRegistration {
+            Objects.requireNonNull(owner, "owner");
+            Objects.requireNonNull(key, "key");
         }
     }
 }

@@ -26,12 +26,15 @@ class MinecraftInyModuleTest {
         Fixtures fixtures = fixtures();
         Iny iny = Iny.builder().install(new MinecraftInyModule(fixtures.server())).build();
 
-        assertEquals(6, iny.factories().size());
+        assertEquals(7, iny.factories().size());
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:location")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:world")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:material")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:vector")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:block")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("context:value")));
+        assertEquals(MinecraftContextKeys.PLAYER,
+                iny.contextKeys().require(InyIdentifier.parse("minecraft:player")));
     }
 
     @Test

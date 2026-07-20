@@ -29,6 +29,7 @@ class BukkitArchitectureTest {
                     "net.iridiummc.iny.exception",
                     "net.iridiummc.iny.factory",
                     "net.iridiummc.iny.readiness",
+                    "net.iridiummc.iny.runtime",
                     "net.iridiummc.iny.source",
                     "net.iridiummc.iny.value"
             ), exports);

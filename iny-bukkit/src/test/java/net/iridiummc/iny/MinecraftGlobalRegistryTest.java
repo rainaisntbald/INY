@@ -4,6 +4,11 @@ import net.iridiummc.iny.api.InyConfig;
 import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.exception.InyDuplicateFactoryException;
 import net.iridiummc.iny.exception.InyUnknownFactoryException;
+import net.iridiummc.iny.exception.InyUnknownContextKeyException;
+import net.iridiummc.iny.runtime.InyContextKey;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
+import net.iridiummc.iny.runtime.InyRuntimeContext;
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
 import org.junit.jupiter.api.Test;
@@ -14,6 +19,8 @@ import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,7 +41,9 @@ class MinecraftGlobalRegistryTest {
         assertSame(plugin, registry.plugin());
         assertSame(registry.iny(), registry.iny());
         assertTrue(registry.isReady());
-        assertEquals(6, registry.factories().size());
+        assertEquals(7, registry.factories().size());
+        assertEquals(MinecraftContextKeys.PLAYER,
+                registry.contextKeys().require(InyIdentifier.parse("minecraft:player")));
     }
 
     @Test
@@ -163,6 +172,108 @@ class MinecraftGlobalRegistryTest {
         registry.handlePluginDisable(replacementProvider);
         assertThrows(InyUnknownFactoryException.class,
                 () -> registry.parse("value: external:value()\n").get("value", String.class));
+    }
+
+    @Test
+    void dependentPluginsCanRegisterRuntimeFactoriesInTheSharedRegistry() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin providerPlugin = plugin();
+        AtomicReference<String> received = new AtomicReference<>();
+        registry.registerProvider(providerPlugin, "external:text", context -> runtime -> "runtime");
+        registry.registerRunnable(providerPlugin, "external:capture", context -> {
+            InyProvider<String> value = context.arguments().getProvider(0, String.class);
+            return runtime -> received.set(value.resolve(runtime));
+        });
+        registry.sealFactories();
+
+        InyRunnable action = registry.parse(
+                "action: external:capture(external:text())").getRunnable("action");
+        action.run(InyRuntimeContext.empty());
+
+        assertEquals("runtime", received.get());
+        assertTrue(registry.factories().contains(InyIdentifier.parse("external:text")));
+        assertTrue(registry.factories().contains(InyIdentifier.parse("external:capture")));
+    }
+
+    @Test
+    void providerCanBeRetrievedAsRunnableThroughBukkitConfig() {
+        AtomicInteger calls = new AtomicInteger();
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        registry.registerProvider(plugin(), "external:value", context -> runtime -> calls.incrementAndGet());
+        registry.sealFactories();
+
+        registry.parse("value: external:value()").getRunnable("value")
+                .run(InyRuntimeContext.empty());
+
+        assertEquals(1, calls.get());
+    }
+
+    @Test
+    void disablingProviderRemovesItsRuntimeFactories() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
+        registry.registerRunnable(provider, "external:run", context -> runtime -> { });
+        registry.registerProvider(provider, "external:value", context -> runtime -> "value");
+        registry.sealFactories();
+
+        registry.handlePluginDisable(provider);
+
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:run")));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:value")));
+    }
+
+    @Test
+    void replacementTransfersRuntimeFactoryOwnership() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin original = plugin();
+        Plugin replacement = plugin();
+        registry.registerProvider(original, "external:value", context -> runtime -> "original");
+        registry.replaceProvider(replacement, "external:value", context -> runtime -> "replacement");
+        registry.sealFactories();
+
+        registry.handlePluginDisable(original);
+        assertEquals("replacement", registry.parse("value: external:value()")
+                .getProvider("value", String.class).resolve(InyRuntimeContext.empty()));
+
+        registry.handlePluginDisable(replacement);
+        assertThrows(InyUnknownFactoryException.class,
+                () -> registry.parse("value: external:value()").getRunnable("value"));
+    }
+
+    @Test
+    void lateRuntimeFactoryRegistrationIsRejected() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
+        registry.sealFactories();
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.registerRunnable(provider, "external:late", context -> runtime -> { }));
+        assertThrows(IllegalStateException.class,
+                () -> registry.registerProvider(provider, "external:late_value", context -> runtime -> "late"));
+    }
+
+    @Test
+    void pluginContextKeysFollowOwnershipAndRegistrationBarrier() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
+        InyContextKey<String> key = InyContextKey.of("external:message", String.class);
+        registry.registerContextKey(provider, key);
+        assertThrows(IllegalArgumentException.class,
+                () -> registry.registerContextKey(provider,
+                        InyContextKey.of("external:message", Integer.class)));
+        registry.sealFactories();
+
+        assertEquals(key, registry.contextKeys().require(key.identifier()));
+        assertEquals("hello", registry.parse("value: context:value(\"external:message\")")
+                .getProvider("value", String.class)
+                .resolve(InyRuntimeContext.builder().put(key, "hello").build()));
+
+        registry.handlePluginDisable(provider);
+        assertThrows(InyUnknownContextKeyException.class,
+                () -> registry.contextKeys().require(key.identifier()));
+        assertThrows(IllegalStateException.class,
+                () -> registry.registerContextKey(provider,
+                        InyContextKey.of("external:late", String.class)));
     }
 
     @Test
