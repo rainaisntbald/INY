@@ -14,6 +14,10 @@ A plugin can do either or both. In both cases, depend on the Bukkit artifact onl
 Use INY as a compile-only dependency because the INY plugin supplies it at runtime:
 
 ```kotlin
+repositories {
+    maven("https://maven.iridiummc.net/releases")
+}
+
 dependencies {
     compileOnly("net.iridiummc:iny-bukkit:<version>")
 }

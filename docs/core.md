@@ -7,6 +7,10 @@ Use INY Core when an application or library needs the parser and typed configura
 INY requires Java 25.
 
 ```kotlin
+repositories {
+    maven("https://maven.iridiummc.net/releases")
+}
+
 dependencies {
     implementation("net.iridiummc:iny-core:<version>")
 }
