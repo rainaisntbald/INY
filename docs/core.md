@@ -168,7 +168,7 @@ Runtime providers and runnables separate configuration construction from executi
 - `InyRunnable` performs an action with an `InyRuntimeContext`.
 - `InyProvider<T>` is also an `InyRunnable`; running it discards the result.
 
-Context keys are typed, namespaced declarations. Registering a key makes the built-in `context:value("namespace:key")` provider available. The context registry defines the keys and their Java types; each immutable runtime context supplies values for any required subset.
+Context keys are typed, namespaced declarations owned by the application or integration that registers them. The built-in `context:value("namespace:key")` provider resolves registered keys; INY does not define application or platform context keys itself. The context registry defines the keys and their Java types, while each immutable runtime context supplies values for any required subset.
 
 This complete example captures a different message on each execution:
 

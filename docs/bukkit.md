@@ -165,18 +165,13 @@ Factory calls are resolved lazily. Parsing can therefore succeed when an optiona
 
 ## Register runtime actions and providers
 
-Runtime factories construct work during configuration loading and perform that work later with an immutable `InyRuntimeContext`. The bundled Minecraft module registers these common keys:
-
-| Key                  | Java type  | Meaning                                      |
-|----------------------|------------|----------------------------------------------|
-| `minecraft:player`   | `Player`   | principal player for the runtime operation   |
-| `minecraft:location` | `Location` | principal location for the runtime operation |
-| `minecraft:world`    | `World`    | principal world for the runtime operation    |
-
-Plugin-specific keys use the plugin's namespace:
+Runtime factories construct work during configuration loading and perform that work later with an immutable `InyRuntimeContext`. INY does not define global Minecraft context keys. Each plugin declares the semantic values it supplies, using its own namespace:
 
 ```java
 public final class ExampleContextKeys {
+    public static final InyContextKey<Player> PLAYER =
+            InyContextKey.of("example:player", Player.class);
+
     public static final InyContextKey<String> PERMISSION_REQUIRED =
             InyContextKey.of("example:permission_required", String.class);
 
@@ -194,28 +189,16 @@ public void onEnable() {
 
     iny.registerContextKey(
             this,
-            ExampleContextKeys.PERMISSION_REQUIRED
+            ExampleContextKeys.PLAYER
     );
-
-    iny.registerRunnable(
+    iny.registerContextKey(
             this,
-            "minecraft:send_message",
-            factoryContext -> {
-                factoryContext.arguments().requireCount(2);
-
-                InyProvider<Player> player =
-                        factoryContext.arguments().getProvider(0, Player.class);
-                InyProvider<String> message =
-                        factoryContext.arguments().getProvider(1, String.class);
-
-                return runtime -> player.resolve(runtime)
-                        .sendMessage(message.resolve(runtime));
-            }
+            ExampleContextKeys.PERMISSION_REQUIRED
     );
 
     iny.registerProvider(
             this,
-            "minecraft:has_permission",
+            "example:has_permission",
             factoryContext -> {
                 factoryContext.arguments().requireCount(2);
 
@@ -235,12 +218,12 @@ The resulting configuration composes a context-backed player, a static message, 
 
 ```iny
 on_use: minecraft:send_message(
-  context:value("minecraft:player"),
+  context:value("example:player"),
   "Hello"
 )
 
-can_use: minecraft:has_permission(
-  context:value("minecraft:player"),
+can_use: example:has_permission(
+  context:value("example:player"),
   context:value("example:permission_required")
 )
 ```
@@ -253,7 +236,7 @@ InyProvider<Boolean> canUse =
         config.getProvider("can_use", Boolean.class);
 
 InyRuntimeContext runtime = InyRuntimeContext.builder()
-        .put(MinecraftContextKeys.PLAYER, player)
+        .put(ExampleContextKeys.PLAYER, player)
         .put(
                 ExampleContextKeys.PERMISSION_REQUIRED,
                 "example.use"
@@ -265,7 +248,7 @@ if (canUse.resolve(runtime)) {
 }
 ```
 
-`minecraft:send_message` requires `minecraft:player`; its message argument may be static or provider-backed. `minecraft:has_permission` requires `minecraft:player` and, in this example, `example:permission_required`. A missing key fails when the operation executes, not while configuration is loaded.
+`minecraft:send_message` requires its first argument to resolve to a `Player`; it does not require a globally predefined key, and its message argument may be static or provider-backed. `example:has_permission` uses the plugin-owned `example:player` and `example:permission_required` keys. A missing key fails when the operation executes, not while configuration is loaded.
 
 Providers resolve on every invocation and are not cached. A provider can also be retrieved as an `InyRunnable`, in which case its result is discarded. Ordinary `get(...)` never runs a provider or runnable.
 
