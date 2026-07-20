@@ -89,6 +89,10 @@ The standalone parser, configuration model, decoder system, and factory registry
 Use this for normal Java applications or libraries that do not depend on Bukkit.
 
 ```kotlin
+repositories {
+    maven("https://maven.iridiummc.net/releases")
+}
+
 dependencies {
     implementation("net.iridiummc:iny-core:<version>")
 }
@@ -106,6 +110,10 @@ The Bukkit integration and normal entry point for server plugins.
 It provides one shared INY service, lifecycle-aware factory registration, configuration loading from plugin data folders, readiness handling, and built-in Minecraft factories.
 
 ```kotlin
+repositories {
+    maven("https://maven.iridiummc.net/releases")
+}
+
 dependencies {
     compileOnly("net.iridiummc:iny-bukkit:<version>")
 }
