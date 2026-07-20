@@ -34,8 +34,7 @@ class MinecraftInyModuleTest {
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:vector")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:block")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("context:value")));
-        assertEquals(MinecraftContextKeys.PLAYER,
-                iny.contextKeys().require(InyIdentifier.parse("minecraft:player")));
+        assertTrue(iny.contextKeys().entries().isEmpty());
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:send_message")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:give_item")));
     }

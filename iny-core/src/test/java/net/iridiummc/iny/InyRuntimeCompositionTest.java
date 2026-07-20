@@ -2,6 +2,7 @@ package net.iridiummc.iny;
 
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyConfig;
+import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.exception.InyFactoryArgumentException;
 import net.iridiummc.iny.exception.InyInvalidProviderResultException;
 import net.iridiummc.iny.exception.InyNotProviderException;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InyRuntimeCompositionTest {
 
@@ -57,13 +59,21 @@ class InyRuntimeCompositionTest {
     }
 
     @Test
-    void registeredContextKeysInstallTheBuiltInContextProvider() {
+    void builtInContextProviderResolvesRegisteredKeys() {
         InyContextKey<String> messageKey = InyContextKey.of("test:message", String.class);
         InyConfig config = Iny.builder().registerContextKey(messageKey).build()
                 .parse("message: context:value(\"test:message\")");
 
         assertEquals("value", config.getProvider("message", String.class).resolve(
                 InyRuntimeContext.builder().put(messageKey, "value").build()));
+    }
+
+    @Test
+    void contextProviderIsAvailableWithoutDefaultKeys() {
+        Iny iny = Iny.builder().build();
+
+        assertEquals(0, iny.contextKeys().entries().size());
+        assertTrue(iny.factories().contains(InyIdentifier.parse("context:value")));
     }
 
     @Test

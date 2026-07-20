@@ -700,7 +700,7 @@ public final class Iny {
         @SuppressWarnings({"rawtypes", "unchecked"})
         private void installContextValueFactory() {
             InyIdentifier identifier = InyIdentifier.parse("context:value");
-            if (contextKeys.isEmpty() || factories.containsKey(identifier)) {
+            if (factories.containsKey(identifier)) {
                 return;
             }
             InyFactory<InyProvider<Object>> factory = context -> {

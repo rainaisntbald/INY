@@ -3,7 +3,6 @@ package net.iridiummc.iny.minecraft;
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyModule;
 import net.iridiummc.iny.factory.InyFactoryContext;
-import net.iridiummc.iny.MinecraftContextKeys;
 import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.runtime.InyRunnable;
 import org.bukkit.Location;
@@ -33,10 +32,6 @@ public final class MinecraftInyModule implements InyModule {
 
     @Override
     public void configure(Iny.Builder builder) {
-        builder.registerContextKey(MinecraftContextKeys.PLAYER);
-        builder.registerContextKey(MinecraftContextKeys.LOCATION);
-        builder.registerContextKey(MinecraftContextKeys.WORLD);
-
         builder.registerRunnable("minecraft:send_message", this::sendMessage);
         builder.registerRunnable("minecraft:give_item", this::giveItem);
 

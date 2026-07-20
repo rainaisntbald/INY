@@ -269,7 +269,7 @@ class InyFactoryTest {
         assertEquals(40, constructions.get());
         assertNotSame(config.get("value", CounterValue.class), config.get("value", CounterValue.class));
         assertEquals(42, constructions.get());
-        assertEquals(2, iny.factories().size());
+        assertEquals(3, iny.factories().size());
     }
 
     private static Iny.Builder configuredTypes() {
