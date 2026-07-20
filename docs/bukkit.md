@@ -163,6 +163,114 @@ Vector offset = config.get("offset", Vector.class);
 
 Factory calls are resolved lazily. Parsing can therefore succeed when an optional provider is absent; requesting that value later throws `InyUnknownFactoryException`.
 
+## Register runtime actions and providers
+
+Runtime factories construct work during configuration loading and perform that work later with an immutable `InyRuntimeContext`. The bundled Minecraft module registers these common keys:
+
+| Key                  | Java type  | Meaning                                      |
+|----------------------|------------|----------------------------------------------|
+| `minecraft:player`   | `Player`   | principal player for the runtime operation   |
+| `minecraft:location` | `Location` | principal location for the runtime operation |
+| `minecraft:world`    | `World`    | principal world for the runtime operation    |
+
+Plugin-specific keys use the plugin's namespace:
+
+```java
+public final class ExampleContextKeys {
+    public static final InyContextKey<String> PERMISSION_REQUIRED =
+            InyContextKey.of("example:permission_required", String.class);
+
+    private ExampleContextKeys() {
+    }
+}
+```
+
+Register keys and runtime factories synchronously during `onEnable()`, just like ordinary factories:
+
+```java
+@Override
+public void onEnable() {
+    INY iny = INY.getInstance();
+
+    iny.registerContextKey(
+            this,
+            ExampleContextKeys.PERMISSION_REQUIRED
+    );
+
+    iny.registerRunnable(
+            this,
+            "minecraft:send_message",
+            factoryContext -> {
+                factoryContext.arguments().requireCount(2);
+
+                InyProvider<Player> player =
+                        factoryContext.arguments().getProvider(0, Player.class);
+                InyProvider<String> message =
+                        factoryContext.arguments().getProvider(1, String.class);
+
+                return runtime -> player.resolve(runtime)
+                        .sendMessage(message.resolve(runtime));
+            }
+    );
+
+    iny.registerProvider(
+            this,
+            "minecraft:has_permission",
+            factoryContext -> {
+                factoryContext.arguments().requireCount(2);
+
+                InyProvider<Player> player =
+                        factoryContext.arguments().getProvider(0, Player.class);
+                InyProvider<String> permission =
+                        factoryContext.arguments().getProvider(1, String.class);
+
+                return runtime -> player.resolve(runtime)
+                        .hasPermission(permission.resolve(runtime));
+            }
+    );
+}
+```
+
+The resulting configuration composes a context-backed player, a static message, and a context-backed permission:
+
+```iny
+on_use: minecraft:send_message(
+  context:value("minecraft:player"),
+  "Hello"
+)
+
+can_use: minecraft:has_permission(
+  context:value("minecraft:player"),
+  context:value("example:permission_required")
+)
+```
+
+Retrieve the runtime objects after readiness, then supply values when the operation executes:
+
+```java
+InyRunnable onUse = config.getRunnable("on_use");
+InyProvider<Boolean> canUse =
+        config.getProvider("can_use", Boolean.class);
+
+InyRuntimeContext runtime = InyRuntimeContext.builder()
+        .put(MinecraftContextKeys.PLAYER, player)
+        .put(
+                ExampleContextKeys.PERMISSION_REQUIRED,
+                "example.use"
+        )
+        .build();
+
+if (canUse.resolve(runtime)) {
+    onUse.run(runtime);
+}
+```
+
+`minecraft:send_message` requires `minecraft:player`; its message argument may be static or provider-backed. `minecraft:has_permission` requires `minecraft:player` and, in this example, `example:permission_required`. A missing key fails when the operation executes, not while configuration is loaded.
+
+Providers resolve on every invocation and are not cached. A provider can also be retrieved as an `InyRunnable`, in which case its result is discarded. Ordinary `get(...)` never runs a provider or runnable.
+
+INY does not move execution onto Bukkit's main thread. `Player`, `Location`, `World`, and other Bukkit objects retain Bukkit's normal thread-affinity requirements; callers must resolve providers and run actions on an appropriate thread.
+
 ## Produce a configuration type
 
 Register factories synchronously from your plugin's `onEnable()`. Registration closes at the end of Bukkit startup, before INY becomes ready.

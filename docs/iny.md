@@ -163,6 +163,14 @@ Newlines may appear between arguments. Trailing commas are not supported.
 
 A namespaced value is treated as a call only when a valid identifier is followed by `(`. Calls are parsed without consulting a Java factory registry and are resolved later when requested through the API.
 
+The `context` namespace is reserved for runtime context access. INY 1.1 uses the ordinary provider-factory form:
+
+```iny
+message: context:value("example:message")
+```
+
+The quoted argument is the complete namespaced context-key identifier. Bare shorthand such as `context:message` is not part of the initial runtime syntax. `context:value(...)` constructs a provider during typed configuration retrieval; it reads the context only when that provider is resolved or run.
+
 ## Dotted API paths
 
 Java lookups navigate nested sections with dotted paths:

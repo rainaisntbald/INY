@@ -160,6 +160,74 @@ Parsing stores calls unevaluated. Resolution occurs when a value is requested, a
 
 Use a decoder for an ordinary representation such as `port: 8080`. Use a factory when the syntax should explicitly select construction, such as `origin: geometry:point(0, 0, 0)`.
 
+## Evaluate values at runtime
+
+Runtime providers and runnables separate configuration construction from execution:
+
+- `InyProvider<T>` resolves a value from an `InyRuntimeContext`.
+- `InyRunnable` performs an action with an `InyRuntimeContext`.
+- `InyProvider<T>` is also an `InyRunnable`; running it discards the result.
+
+Context keys are typed, namespaced declarations. Registering a key makes the built-in `context:value("namespace:key")` provider available. The context registry defines the keys and their Java types; each immutable runtime context supplies values for any required subset.
+
+This complete example captures a different message on each execution:
+
+```java
+InyContextKey<String> messageKey =
+        InyContextKey.of("example:message", String.class);
+
+AtomicReference<String> received = new AtomicReference<>();
+
+Iny iny = Iny.builder()
+        .registerContextKey(messageKey)
+        .registerRunnable("example:capture", factoryContext -> {
+            factoryContext.arguments().requireCount(1);
+
+            InyProvider<String> message =
+                    factoryContext.arguments().getProvider(0, String.class);
+
+            return runtime -> received.set(message.resolve(runtime));
+        })
+        .build();
+
+InyConfig config = iny.parse("""
+        action: example:capture(
+          context:value("example:message")
+        )
+        """);
+
+InyRunnable action = config.getRunnable("action");
+
+action.run(InyRuntimeContext.builder()
+        .put(messageKey, "first")
+        .build());
+
+action.run(InyRuntimeContext.builder()
+        .put(messageKey, "second")
+        .build());
+```
+
+During the configuration phase, retrieving `action` invokes `example:capture` and constructs an `InyRunnable`. It does not resolve the message or run the action. During each runtime phase, the runnable passes its caller-supplied context into the captured provider. Provider results are not cached, so the two calls above observe `first` and `second` respectively.
+
+`getProvider(index, type)` on factory arguments and `getProvider(path, type)` on sections use the same lifting rules:
+
+- A provider remains deferred and its result is checked on every resolution.
+- A static value is decoded once and becomes a constant provider.
+- An ordinary factory result is constructed and decoded once, then becomes a constant provider.
+- A runnable-only value is rejected because it cannot produce a result.
+
+Consequently, this configuration also works without any context value:
+
+```iny
+action: example:capture("constant")
+```
+
+Ordinary `get(...)` remains a configuration-time operation. It never calls `InyProvider.resolve(...)` or `InyRunnable.run(...)`, and it does not implicitly convert a provider to its result type. Use `getProvider(...)` or `getRunnable(...)` to cross the runtime boundary explicitly.
+
+Runtime contexts and provider results are non-null in 1.1. A missing required value throws `InyMissingContextValueException` when the provider executes. A null or incompatible provider result throws `InyInvalidProviderResultException` at the path whose requested result type is known. Contexts are immutable; `with(key, value)` derives a new context without changing its parent.
+
+INY is thread-neutral. Contexts are safe to share, but providers and runnables are only as thread-safe as the services and objects they capture. INY does not schedule their execution.
+
 ## Group an integration as a module
 
 An `InyModule` is a lightweight way to install related decoders and factories:
