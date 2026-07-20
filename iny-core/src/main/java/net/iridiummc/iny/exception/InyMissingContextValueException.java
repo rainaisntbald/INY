@@ -7,9 +7,14 @@ import java.util.Objects;
 /** Raised when runtime execution requires a context value that was not supplied. */
 public final class InyMissingContextValueException extends InyException {
 
+    /** Required key that was absent. */
     private final InyContextKey<?> key;
 
-    /** Creates a missing runtime value failure. */
+    /**
+     * Creates a missing runtime value failure.
+     *
+     * @param key required key that was absent
+     */
     public InyMissingContextValueException(InyContextKey<?> key) {
         super(message(key));
         this.key = Objects.requireNonNull(key, "key");
@@ -21,7 +26,11 @@ public final class InyMissingContextValueException extends InyException {
                 + "' with type " + key.type().getTypeName();
     }
 
-    /** Returns the missing key. */
+    /**
+     * Returns the missing key.
+     *
+     * @return missing context key
+     */
     public InyContextKey<?> key() {
         return key;
     }

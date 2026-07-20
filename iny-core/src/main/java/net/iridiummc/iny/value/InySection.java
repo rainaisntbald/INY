@@ -114,13 +114,23 @@ public interface InySection {
         return get(path, InySection.class);
     }
 
-    /** Returns a required deferred action without executing it. */
+    /**
+     * Returns a required deferred action without executing it.
+     *
+     * @param path dotted path relative to this section
+     * @return deferred action
+     */
     default InyRunnable getRunnable(String path) {
         return get(path, InyRunnable.class);
     }
 
     /**
      * Returns a checked deferred provider. Plain values become constant providers; actions are rejected.
+     *
+     * @param path dotted path relative to this section
+     * @param targetType requested provider result type
+     * @param <T> provider result type
+     * @return checked deferred or constant provider
      */
     default <T> InyProvider<T> getProvider(String path, Class<T> targetType) {
         Objects.requireNonNull(targetType, "targetType");

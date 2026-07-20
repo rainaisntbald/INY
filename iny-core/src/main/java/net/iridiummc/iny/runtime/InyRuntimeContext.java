@@ -18,17 +18,31 @@ public final class InyRuntimeContext {
         this.values = Map.copyOf(values);
     }
 
-    /** Returns the shared empty runtime context. */
+    /**
+     * Returns the shared empty runtime context.
+     *
+     * @return empty context
+     */
     public static InyRuntimeContext empty() {
         return EMPTY;
     }
 
-    /** Creates a mutable builder whose completed contexts are immutable snapshots. */
+    /**
+     * Creates a mutable builder whose completed contexts are immutable snapshots.
+     *
+     * @return new context builder
+     */
     public static Builder builder() {
         return new Builder();
     }
 
-    /** Returns a required typed value. */
+    /**
+     * Returns a required typed value.
+     *
+     * @param key required context key
+     * @param <T> context value type
+     * @return the stored value
+     */
     public <T> T get(InyContextKey<T> key) {
         Objects.requireNonNull(key, "key");
         InyContextKey<?> storedKey = storedKey(key);
@@ -39,12 +53,23 @@ public final class InyRuntimeContext {
         return key.type().cast(values.get(storedKey));
     }
 
-    /** Returns a required value for a wildcard key. */
+    /**
+     * Returns a required value for a wildcard key.
+     *
+     * @param key required wildcard key
+     * @return the stored value
+     */
     public Object getUnchecked(InyContextKey<?> key) {
         return get(capture(Objects.requireNonNull(key, "key")));
     }
 
-    /** Finds a typed value without treating absence as a failure. */
+    /**
+     * Finds a typed value without treating absence as a failure.
+     *
+     * @param key context key
+     * @param <T> context value type
+     * @return the stored value, or empty when absent
+     */
     public <T> Optional<T> find(InyContextKey<T> key) {
         Objects.requireNonNull(key, "key");
         InyContextKey<?> storedKey = storedKey(key);
@@ -55,7 +80,12 @@ public final class InyRuntimeContext {
         return Optional.of(key.type().cast(values.get(storedKey)));
     }
 
-    /** Tests whether a value exists for the key identifier and compatible registered type. */
+    /**
+     * Tests whether a value exists for the key identifier and compatible registered type.
+     *
+     * @param key context key
+     * @return whether a compatible value is present
+     */
     public boolean contains(InyContextKey<?> key) {
         Objects.requireNonNull(key, "key");
         InyContextKey<?> storedKey = storedKey(key);
@@ -66,7 +96,14 @@ public final class InyRuntimeContext {
         return true;
     }
 
-    /** Returns a new context containing the supplied value. */
+    /**
+     * Returns a new context containing the supplied value.
+     *
+     * @param key context key
+     * @param value non-null context value
+     * @param <T> context value type
+     * @return derived immutable context
+     */
     public <T> InyRuntimeContext with(InyContextKey<T> key, T value) {
         Map<InyContextKey<?>, Object> copy = new HashMap<>(values);
         putChecked(copy, key, value);
@@ -115,13 +152,27 @@ public final class InyRuntimeContext {
     public static final class Builder {
         private final Map<InyContextKey<?>, Object> values = new HashMap<>();
 
-        /** Adds or replaces a value for a key of the same type. */
+        private Builder() {
+        }
+
+        /**
+         * Adds or replaces a value for a key of the same type.
+         *
+         * @param key context key
+         * @param value non-null context value
+         * @param <T> context value type
+         * @return this builder
+         */
         public <T> Builder put(InyContextKey<T> key, T value) {
             putChecked(values, key, value);
             return this;
         }
 
-        /** Builds an immutable snapshot. */
+        /**
+         * Builds an immutable snapshot.
+         *
+         * @return immutable runtime context
+         */
         public InyRuntimeContext build() {
             return values.isEmpty() ? EMPTY : new InyRuntimeContext(values);
         }
