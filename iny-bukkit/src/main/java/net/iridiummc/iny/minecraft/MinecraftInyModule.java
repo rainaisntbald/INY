@@ -87,14 +87,15 @@ public final class MinecraftInyModule implements InyModule {
     }
 
     private ItemStack itemStackFactory(InyFactoryContext context) {
-        context.arguments().requireCount(2);
+        context.arguments().requireCountBetween(1, 2);
         String name = context.arguments().get(0, String.class);
         Material material = Material.matchMaterial(name);
         if (material == null) {
             throw new IllegalArgumentException("Unknown Bukkit material '" + name + "'");
         }
 
-        int count = context.arguments().get(1, Integer.class);
+        Integer count = context.arguments().getOrDefault(1, Integer.class, 1);
+
         if(count < 1 || count > 99) throw new IllegalArgumentException("Invalid stack size: " + count);
 
         return new ItemStack(material, count);
