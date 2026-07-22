@@ -1,10 +1,13 @@
 package net.iridiummc.iny.minecraft;
 
+import net.iridiummc.iny.annotation.InyFactory;
+import net.iridiummc.iny.annotation.InyRunnable;
 import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyModule;
 import net.iridiummc.iny.factory.InyFactoryContext;
-import net.iridiummc.iny.runtime.InyProvider;
-import net.iridiummc.iny.runtime.InyRunnable;
+import net.kyori.adventure.sound.Sound;
+import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -32,22 +35,16 @@ public final class MinecraftInyModule implements InyModule {
 
     @Override
     public void configure(Iny.Builder builder) {
-        builder.registerRunnable("minecraft:send_message", this::sendMessage);
-        builder.registerRunnable("minecraft:give_item", this::giveItem);
-
-        builder.registerFactory("minecraft:world", World.class, this::worldFactory);
-        builder.registerFactory("minecraft:material", Material.class, this::materialFactory);
-        builder.registerFactory("minecraft:vector", Vector.class, this::vectorFactory);
-        builder.registerFactory("minecraft:location", Location.class, this::locationFactory);
-        builder.registerFactory("minecraft:block", Block.class, this::blockFactory);
-        builder.registerFactory("minecraft:item_stack", ItemStack.class, this::itemStackFactory);
+        builder.registerAnnotated(this);
     }
 
+    @InyFactory("minecraft:world")
     private World worldFactory(InyFactoryContext context) {
         context.arguments().requireCount(1);
         return world(context.arguments().get(0, String.class));
     }
 
+    @InyFactory("minecraft:material")
     private Material materialFactory(InyFactoryContext context) {
         context.arguments().requireCount(1);
         String name = context.arguments().get(0, String.class);
@@ -58,6 +55,7 @@ public final class MinecraftInyModule implements InyModule {
         return material;
     }
 
+    @InyFactory("minecraft:vector")
     private Vector vectorFactory(InyFactoryContext context) {
         context.arguments().requireCount(3);
         return new Vector(
@@ -66,6 +64,7 @@ public final class MinecraftInyModule implements InyModule {
                 context.arguments().get(2, Double.class));
     }
 
+    @InyFactory("minecraft:location")
     private Location locationFactory(InyFactoryContext context) {
         context.arguments().requireCountBetween(4, 6);
         World world = world(context.arguments().get(0, String.class));
@@ -77,6 +76,7 @@ public final class MinecraftInyModule implements InyModule {
         return new Location(world, x, y, z, yaw, pitch);
     }
 
+    @InyFactory("minecraft:block")
     private Block blockFactory(InyFactoryContext context) {
         context.arguments().requireCount(4);
         World world = world(context.arguments().get(0, String.class));
@@ -86,6 +86,7 @@ public final class MinecraftInyModule implements InyModule {
                 context.arguments().get(3, Integer.class));
     }
 
+    @InyFactory("minecraft:item_stack")
     private ItemStack itemStackFactory(InyFactoryContext context) {
         context.arguments().requireCountBetween(1, 2);
         String name = context.arguments().get(0, String.class);
@@ -101,34 +102,30 @@ public final class MinecraftInyModule implements InyModule {
         return new ItemStack(material, count);
     }
 
-    private InyRunnable sendMessage(InyFactoryContext context) {
-        context.arguments().requireCount(2);
-
-        InyProvider<Player> playerProvider =
-                context.arguments().getProvider(0, Player.class);
-        InyProvider<String> messageProvider =
-                context.arguments().getProvider(1, String.class);
-
-        return runtime -> {
-            Player player = playerProvider.resolve(runtime);
-            String message = messageProvider.resolve(runtime);
-            player.sendMessage(message);
-        };
+    @InyRunnable("minecraft:send_message")
+    private void sendMessage(Player player, Component message) {
+        player.sendMessage(message);
     }
 
-    private InyRunnable giveItem(InyFactoryContext context) {
-        context.arguments().requireCount(2);
+    @InyRunnable("minecraft:broadcast")
+    private void broadcast(Component message) {
+        Bukkit.broadcast(message);
+    }
 
-        InyProvider<Player> playerProvider =
-                context.arguments().getProvider(0, Player.class);
-        InyProvider<ItemStack> itemStackProvider =
-                context.arguments().getProvider(1, ItemStack.class);
+    @InyRunnable("minecraft:give_item")
+    private void giveItem(Player player, ItemStack itemStack) {
+        player.give(itemStack);
+    }
 
-        return runtime -> {
-            Player player = playerProvider.resolve(runtime);
-            ItemStack itemStack = itemStackProvider.resolve(runtime);
-            player.give(itemStack);
-        };
+    @InyRunnable("minecraft:play_sound")
+    private void playSound(Player player, Sound sound) {
+        player.playSound(sound);
+    }
+
+    @InyRunnable("minecraft:set_block")
+    private void setBlock(Location location, Material material) {
+        World world = location.getWorld();
+        world.setType(location, material);
     }
 
     private World world(String name) {

@@ -2,6 +2,7 @@
  * Core INY parsing, decoding, and factory APIs.
  */
 module net.iridiummc.iny.core {
+    exports net.iridiummc.iny.annotation;
     exports net.iridiummc.iny.api;
     exports net.iridiummc.iny.codec;
     exports net.iridiummc.iny.exception;

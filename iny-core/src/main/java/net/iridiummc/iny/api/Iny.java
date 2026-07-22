@@ -18,6 +18,7 @@ import net.iridiummc.iny.factory.InyFactoryRegistry;
 import net.iridiummc.iny.internal.codec.BuiltInDecoders;
 import net.iridiummc.iny.internal.codec.DefaultInyDecodeContext;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
+import net.iridiummc.iny.internal.annotation.AnnotatedMethodRegistrar;
 import net.iridiummc.iny.internal.config.InyConfigs;
 import net.iridiummc.iny.internal.factory.BuiltInFactories;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
@@ -566,6 +567,18 @@ public final class Iny {
          */
         public <T> Builder registerProvider(String identifier, InyFactory<InyProvider<T>> factory) {
             return registerProvider(InyIdentifier.parse(identifier), factory);
+        }
+
+        /**
+         * Registers annotated methods declared directly by one explicitly supplied instance.
+         * Private methods are supported when their declaring package permits reflective access.
+         *
+         * @param instance instance whose declared methods will be inspected
+         * @return this builder
+         */
+        public Builder registerAnnotated(Object instance) {
+            AnnotatedMethodRegistrar.register(this, instance);
+            return this;
         }
 
         /**
