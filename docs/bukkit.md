@@ -147,7 +147,7 @@ The shared service installs these factory calls:
 | `minecraft:vector`     | `Vector`    | x, y, z                                      |
 | `minecraft:location`   | `Location`  | world, x, y, z, optional yaw, optional pitch |
 | `minecraft:block`      | `Block`     | world, integer x, integer y, integer z       |
-| `minecraft:item_stack` | `ItemStack` | material name, count (optional)              |
+| `minecraft:item_stack` | `ItemStack` | material name, count                         |
 
 For example:
 
