@@ -8,6 +8,7 @@ import net.iridiummc.iny.exception.InySourceLoadException;
 import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
+import net.iridiummc.iny.internal.annotation.AnnotatedMethodRegistrar;
 import net.iridiummc.iny.minecraft.MinecraftInyModule;
 import net.iridiummc.iny.readiness.Readiness;
 import net.iridiummc.iny.readiness.ReadinessState;
@@ -102,6 +103,16 @@ final class MinecraftInyRegistry {
     /** Returns the current immutable runtime context-key snapshot. */
     public InyContextKeyRegistry contextKeys() {
         return activeContextKeySnapshot();
+    }
+
+    /** Registers annotated methods as factories owned by one plugin. */
+    public synchronized MinecraftInyRegistry registerAnnotated(Plugin owner, Object instance) {
+        ensureActive();
+        ensureRegistrationOpen();
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(instance, "instance");
+        AnnotatedMethodRegistrar.register(instance, registration -> registerFactory(owner, registration));
+        return this;
     }
 
     /** Registers a factory owned by a plugin in this server's shared registry. */

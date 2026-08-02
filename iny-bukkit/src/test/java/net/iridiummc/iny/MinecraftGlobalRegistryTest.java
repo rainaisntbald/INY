@@ -11,6 +11,7 @@ import net.iridiummc.iny.runtime.InyRunnable;
 import net.iridiummc.iny.runtime.InyRuntimeContext;
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -41,7 +42,7 @@ class MinecraftGlobalRegistryTest {
         assertSame(plugin, registry.plugin());
         assertSame(registry.iny(), registry.iny());
         assertTrue(registry.isReady());
-        assertEquals(10, registry.factories().size());
+        assertEquals(13, registry.factories().size());
         assertTrue(registry.contextKeys().entries().isEmpty());
     }
 
@@ -154,6 +155,60 @@ class MinecraftGlobalRegistryTest {
         assertFalse(registry.factories().contains(InyIdentifier.parse("disabled:value")));
         assertTrue(registry.factories().contains(InyIdentifier.parse("active:value")));
         assertTrue(registry.factories().contains(InyIdentifier.parse("minecraft:material")));
+    }
+
+    @Test
+    void annotatedRegistrationsUseTheExistingPluginOwnershipLifecycle() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin owner = plugin();
+        AnnotatedLibrary library = new AnnotatedLibrary();
+        registry.registerAnnotated(owner, library);
+        registry.sealFactories();
+
+        InyConfig config = registry.parse("""
+                factory: external:annotated_factory("created")
+                provider: external:annotated_provider(12)
+                runnable: external:annotated_runnable("executed")
+                """);
+        assertEquals("created", config.get("factory", String.class));
+        assertEquals("12", config.getProvider("provider", String.class)
+                .resolve(InyRuntimeContext.empty()));
+        config.getRunnable("runnable").run(InyRuntimeContext.empty());
+        assertEquals("executed", library.received.get());
+
+        registry.handlePluginDisable(owner);
+
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:annotated_factory")));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:annotated_provider")));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:annotated_runnable")));
+        assertThrows(InyUnknownFactoryException.class,
+                () -> config.get("factory", String.class));
+    }
+
+    @Test
+    void ownedAnnotatedRegistrationUsesExistingDuplicateAndStartupRules() {
+        MinecraftInyRegistry duplicateRegistry = new MinecraftInyRegistry(plugin());
+        Plugin owner = plugin();
+        duplicateRegistry.registerFactory(
+                owner, "external:annotated_factory", String.class, context -> "existing");
+
+        assertThrows(InyDuplicateFactoryException.class,
+                () -> duplicateRegistry.registerAnnotated(owner, new AnnotatedLibrary()));
+
+        MinecraftInyRegistry sealedRegistry = new MinecraftInyRegistry(plugin());
+        sealedRegistry.sealFactories();
+        assertThrows(IllegalStateException.class,
+                () -> sealedRegistry.registerAnnotated(owner, new AnnotatedLibrary()));
+    }
+
+    @Test
+    void bukkitFacadeExposesJavaPluginOwnedAnnotatedRegistration() throws ReflectiveOperationException {
+        assertEquals(INY.class, INY.class
+                .getMethod("registerAnnotated", JavaPlugin.class)
+                .getReturnType());
+        assertEquals(INY.class, INY.class
+                .getMethod("registerAnnotated", JavaPlugin.class, Object.class)
+                .getReturnType());
     }
 
     @Test
@@ -316,6 +371,25 @@ class MinecraftGlobalRegistryTest {
 
     private static Plugin plugin() {
         return plugin(Path.of("build", "test-plugin-data"), Map.of());
+    }
+
+    private static final class AnnotatedLibrary {
+        private final AtomicReference<String> received = new AtomicReference<>();
+
+        @net.iridiummc.iny.annotation.InyFactory("external:annotated_factory")
+        private String factory(String value) {
+            return value;
+        }
+
+        @net.iridiummc.iny.annotation.InyProvider("external:annotated_provider")
+        private String provider(int value) {
+            return Integer.toString(value);
+        }
+
+        @net.iridiummc.iny.annotation.InyRunnable("external:annotated_runnable")
+        private void runnable(String value) {
+            received.set(value);
+        }
     }
 
     private static Plugin plugin(Path dataFolder, Map<String, String> resources) {

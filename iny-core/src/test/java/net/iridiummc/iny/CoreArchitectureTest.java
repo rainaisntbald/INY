@@ -28,6 +28,7 @@ class CoreArchitectureTest {
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
             assertEquals(Set.of(
+                    "net.iridiummc.iny.annotation",
                     "net.iridiummc.iny.api",
                     "net.iridiummc.iny.codec",
                     "net.iridiummc.iny.exception",

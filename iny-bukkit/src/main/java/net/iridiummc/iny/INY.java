@@ -128,6 +128,30 @@ public final class INY extends JavaPlugin implements Listener {
     }
 
     /**
+     * Registers annotations declared by a Java plugin and assigns ownership to that plugin.
+     * The registrations are removed automatically if Bukkit disables the owner.
+     *
+     * @param owner plugin that both owns and declares the annotated methods
+     * @return this plugin facade
+     */
+    public INY registerAnnotated(JavaPlugin owner) {
+        return registerAnnotated(owner, owner);
+    }
+
+    /**
+     * Registers annotations declared by an arbitrary instance and assigns ownership to a Java plugin.
+     * Factory registration must still occur during the startup registration phase.
+     *
+     * @param owner Java plugin that owns the resulting registrations
+     * @param instance instance whose declared methods will be inspected
+     * @return this plugin facade
+     */
+    public INY registerAnnotated(JavaPlugin owner, Object instance) {
+        registry().registerAnnotated(owner, instance);
+        return this;
+    }
+
+    /**
      * Registers a factory owned by the providing plugin in the shared server registry.
      * Factory-providing plugins should call this synchronously from {@link Plugin#onEnable()}.
      *

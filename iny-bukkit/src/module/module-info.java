@@ -6,6 +6,7 @@ module net.iridiummc.iny.bukkit {
     requires transitive org.bukkit;
 
     exports net.iridiummc.iny;
+    exports net.iridiummc.iny.annotation;
     exports net.iridiummc.iny.api;
     exports net.iridiummc.iny.codec;
     exports net.iridiummc.iny.exception;
