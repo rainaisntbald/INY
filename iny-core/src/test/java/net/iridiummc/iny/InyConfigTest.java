@@ -292,6 +292,66 @@ class InyConfigTest {
         assertEquals("overridden", overridden.parse("value: \"original\"").get("value", String.class));
     }
 
+    @Test
+    void canSetValuesInRootOfInyConfig() {
+        InyConfig config = iny.parse("""
+                string: "Hello, world!"
+                integer: 105
+                boolean: true
+                decimal: 498.14
+                not_null: "Example"
+                """);
+        assertEquals("Hello, world!", config.get("string", String.class));
+        assertEquals(105, config.get("integer", Integer.class));
+        assertEquals(true, config.get("boolean", Boolean.class));
+        assertEquals(498.14f, config.get("decimal", Float.class));
+        assertEquals("Example", config.get("not_null", String.class));
+
+        config = config.setString("string", "Hello, universe!");
+        config = config.setInteger("integer", 100);
+        config = config.setBoolean("boolean", false);
+        config = config.setDecimal("decimal", 500.0);
+        config = config.setNull("not_null");
+
+        assertEquals("Hello, universe!", config.get("string", String.class));
+        assertEquals(100, config.get("integer", Integer.class));
+        assertEquals(false, config.get("boolean", Boolean.class));
+        assertEquals(500.0f, config.get("decimal", Float.class));
+        assertEquals(Optional.empty(), config.find("not_null"));
+    }
+
+    @Test
+    void canSetValuesInInnerSectionOfConfig() {
+        InyConfig config = iny.parse("""
+                inner {
+                string: "Hello, world!"
+                integer: 105
+                boolean: true
+                decimal: 498.14
+                not_null: "Example"
+                }
+                """);
+        assertEquals("Hello, world!", config.get("inner.string", String.class));
+        assertEquals(105, config.get("inner.integer", Integer.class));
+        assertEquals(true, config.get("inner.boolean", Boolean.class));
+        assertEquals(498.14f, config.get("inner.decimal", Float.class));
+        assertEquals("Example", config.get("inner.not_null", String.class));
+
+        config = config.setString("inner.string", "Hello, universe!");
+        config = config.setInteger("inner.integer", 100);
+        config = config.setBoolean("inner.boolean", false);
+        config = config.setDecimal("inner.decimal", 500.0);
+        config = config.setNull("inner.not_null");
+
+        assertEquals("Hello, universe!", config.get("inner.string", String.class));
+        assertEquals(100, config.get("inner.integer", Integer.class));
+        assertEquals(false, config.get("inner.boolean", Boolean.class));
+        assertEquals(500.0f, config.get("inner.decimal", Float.class));
+        assertEquals(Optional.empty(), config.find("inner.not_null"));
+    }
+
+
+
     private record Unregistered(String value) {
     }
 

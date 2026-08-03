@@ -2,6 +2,8 @@ package net.iridiummc.iny.api;
 
 import net.iridiummc.iny.value.InySection;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,4 +54,39 @@ public interface InyConfig extends InySection {
 
     /** Returns a required immutable list whose elements are decoded as the requested type. */
     <T> List<T> getList(String path, Class<T> type);
+
+    /** Sets the value of the path to a string value */
+    InyConfig setString(String path, String newValue);
+
+    /** Sets the value of the path to a boolean value */
+    InyConfig setBoolean(String path, Boolean newValue);
+
+    /** Sets the value of the path to an integer value */
+    InyConfig setInteger(String path, BigInteger integer);
+
+    /** Sets the value of the path to a decimal value */
+    InyConfig setDecimal(String path, BigDecimal decimal);
+
+    /** Sets the value of the path to null */
+    InyConfig setNull(String path);
+
+    /** Sets the value of the path to an integer value */
+    default InyConfig setInteger(String path, Integer integer) {
+        return setInteger(path, BigInteger.valueOf(integer));
+    }
+
+    /** Sets the value of the path to an integer value */
+    default InyConfig setInteger(String path, Long integer) {
+        return setInteger(path, BigInteger.valueOf(integer));
+    }
+
+    /** Sets the value of the path to a decimal value */
+    default InyConfig setDecimal(String path, Double decimal) {
+        return setDecimal(path, BigDecimal.valueOf(decimal));
+    }
+
+    /** Sets the value of the path to a decimal value */
+    default InyConfig setDecimal(String path, Float decimal) {
+        return setDecimal(path, BigDecimal.valueOf(decimal));
+    }
 }

@@ -5,12 +5,12 @@ import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.path.InyPath;
-import net.iridiummc.iny.internal.value.InyList;
-import net.iridiummc.iny.internal.value.InySectionValue;
-import net.iridiummc.iny.internal.value.InyValue;
+import net.iridiummc.iny.internal.value.*;
 import net.iridiummc.iny.value.InySection;
 import net.iridiummc.iny.runtime.InyProvider;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -179,8 +179,13 @@ public final class InyConfigs {
 
     private static final class DefaultInyConfig extends AbstractInySection implements InyConfig {
 
+        private final InyValueAccess values;
+        private final InySectionValue rootNode;
+
         private DefaultInyConfig(InyValueAccess values, InySectionValue root) {
             super(values, root, "");
+            this.values = values;
+            this.rootNode = root;
         }
 
         @Override
@@ -196,6 +201,42 @@ public final class InyConfigs {
         @Override
         public Optional<Object> findValue(String path) {
             return find(path);
+        }
+
+        @Override
+        public InyConfig setString(String path, String newValue) {
+            InyString inyString = new InyString(newValue);
+            return set(path, inyString);
+        }
+
+        @Override
+        public InyConfig setBoolean(String path, Boolean newValue) {
+            InyBoolean inyBoolean = new InyBoolean(newValue);
+            return set(path, inyBoolean);
+        }
+
+        @Override
+        public InyConfig setInteger(String path, BigInteger integer) {
+            InyInteger inyInteger = new InyInteger(integer);
+            return set(path, inyInteger);
+        }
+
+        @Override
+        public InyConfig setDecimal(String path, BigDecimal decimal) {
+            InyDecimal inyDecimal = new InyDecimal(decimal);
+            return set(path, inyDecimal);
+        }
+
+        @Override
+        public InyConfig setNull(String path) {
+            InyNull inyNull = InyNull.INSTANCE;
+            return set(path, inyNull);
+        }
+
+        private InyConfig set(String path, InyValue newValue) {
+            InySectionValue updatedRootNode = this.rootNode.set(path, newValue);
+
+            return new DefaultInyConfig(this.values, updatedRootNode);
         }
     }
 
