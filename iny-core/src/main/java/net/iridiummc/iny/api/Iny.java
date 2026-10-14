@@ -23,6 +23,7 @@ import net.iridiummc.iny.internal.config.InyConfigs;
 import net.iridiummc.iny.internal.factory.BuiltInFactories;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
+import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.parser.Parser;
 import net.iridiummc.iny.internal.source.SourceLoading;
 import net.iridiummc.iny.internal.runtime.ImmutableInyContextKeyRegistry;
@@ -166,8 +167,9 @@ public final class Iny {
      */
     public InyConfig parse(InySource source) {
         Objects.requireNonNull(source, "source");
-        InySectionValue root = new Parser(source, new Lexer(source).lex()).parse();
-        return InyConfigs.create(values, root);
+        List<Token> tokens = new Lexer(source).lex();
+        InySectionValue root = new Parser(source, tokens).parse();
+        return InyConfigs.create(values, root, tokens, source, this);
     }
 
     /**

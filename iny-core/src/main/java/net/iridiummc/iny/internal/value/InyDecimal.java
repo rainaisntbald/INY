@@ -15,4 +15,9 @@ public record InyDecimal(BigDecimal value) implements InyValue {
     public String actualType() {
         return InyValueType.DECIMAL.displayName();
     }
+
+    @Override
+    public String toText() {
+        return String.valueOf(value);
+    }
 }

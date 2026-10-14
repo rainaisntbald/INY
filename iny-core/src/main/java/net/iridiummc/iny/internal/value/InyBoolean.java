@@ -7,4 +7,9 @@ public record InyBoolean(boolean value) implements InyValue {
     public String actualType() {
         return InyValueType.BOOLEAN.displayName();
     }
+
+    @Override
+    public String toText() {
+        return String.valueOf(value);
+    }
 }

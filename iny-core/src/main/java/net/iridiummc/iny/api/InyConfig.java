@@ -2,8 +2,10 @@ package net.iridiummc.iny.api;
 
 import net.iridiummc.iny.value.InySection;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,6 +71,8 @@ public interface InyConfig extends InySection {
 
     /** Sets the value of the path to null */
     InyConfig setNull(String path);
+
+    void save(Path path) throws IOException;
 
     /** Sets the value of the path to an integer value */
     default InyConfig setInteger(String path, Integer integer) {

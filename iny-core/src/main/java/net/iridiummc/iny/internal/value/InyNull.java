@@ -12,4 +12,9 @@ public final class InyNull implements InyValue {
     public String actualType() {
         return InyValueType.NULL.displayName();
     }
+
+    @Override
+    public String toText() {
+        return "null";
+    }
 }

@@ -350,7 +350,73 @@ class InyConfigTest {
         assertEquals(Optional.empty(), config.find("inner.not_null"));
     }
 
+    @Test
+    void doesNotOverwriteFurtherInnerValue() {
+        InyConfig config = iny.parse("""
+                inner {
+                inner_two {
+                string: "Do not overwrite"
+                }
+                string: "Hello, world!"
+                }
+                """);
+        config = config.setString("inner.string", "Test");
 
+        assertEquals("Do not overwrite", config.get("inner.inner_two.string", String.class));
+        assertEquals("Test", config.get("inner.string", String.class));
+    }
+
+    @Test
+    void doesNotOverwriteFurtherOuterValue() {
+        InyConfig config = iny.parse("""
+                inner {
+                inner_two {
+                string: "Hello, world!"
+                }
+                string: "Do not overwrite"
+                }
+                """);
+        config = config.setString("inner.inner_two.string", "Test");
+
+        assertEquals("Do not overwrite", config.get("inner.string", String.class));
+        assertEquals("Test", config.get("inner.inner_two.string", String.class));
+    }
+
+    @Test
+    void handlesSavingEscapedCharactersCorrectly() {
+        InyConfig config = iny.parse("""
+                inner {
+                string: "Hello, world!"
+                }
+                """);
+
+        config = config.setString("inner.string", "\\");
+        assertEquals("\\", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\\\\");
+        assertEquals("\\\\", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\b");
+        assertEquals("\b", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\f");
+        assertEquals("\f", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\n");
+        assertEquals("\n", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\r");
+        assertEquals("\r", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\t");
+        assertEquals("\t", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "\0");
+        assertEquals("\0", config.get("inner.string", String.class));
+
+        config = config.setString("inner.string", "some\"\nthing\0 with \b\rlo\tts of \\\\escape \\characters");
+        assertEquals("some\"\nthing\0 with \b\rlo\tts of \\\\escape \\characters", config.get("inner.string", String.class));
+    }
 
     private record Unregistered(String value) {
     }

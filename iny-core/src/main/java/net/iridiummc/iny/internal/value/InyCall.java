@@ -52,4 +52,9 @@ public final class InyCall implements InyValue {
     public int hashCode() {
         return Objects.hash(identifier, arguments);
     }
+
+    @Override
+    public String toText() {
+        throw new IllegalArgumentException("Cannot convert InyCall to text in v1.1.0.");
+    }
 }

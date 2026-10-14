@@ -18,4 +18,9 @@ public record InyInteger(BigInteger value) implements InyValue {
     public String actualType() {
         return InyValueType.INTEGER.displayName();
     }
+
+    @Override
+    public String toText() {
+        return String.valueOf(value);
+    }
 }

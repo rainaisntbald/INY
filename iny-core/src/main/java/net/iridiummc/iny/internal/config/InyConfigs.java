@@ -1,23 +1,25 @@
 package net.iridiummc.iny.internal.config;
 
+import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyConfig;
 import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
+import net.iridiummc.iny.internal.Utils;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
+import net.iridiummc.iny.internal.lexer.Token;
+import net.iridiummc.iny.internal.lexer.TokenType;
 import net.iridiummc.iny.internal.path.InyPath;
 import net.iridiummc.iny.internal.value.*;
+import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
 import net.iridiummc.iny.runtime.InyProvider;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 
 /** Internal construction boundary for public configuration and section views. */
 public final class InyConfigs {
@@ -26,8 +28,8 @@ public final class InyConfigs {
     }
 
     /** Creates an immutable root configuration view. */
-    public static InyConfig create(InyValueAccess values, InySectionValue root) {
-        return new DefaultInyConfig(values, root);
+    public static InyConfig create(InyValueAccess values, InySectionValue root, List<Token> tokens, InySource source, Iny context) {
+        return new DefaultInyConfig(values, root, tokens, source, context);
     }
 
     /** Creates a navigable public view over an internal section node. */
@@ -179,13 +181,15 @@ public final class InyConfigs {
 
     private static final class DefaultInyConfig extends AbstractInySection implements InyConfig {
 
-        private final InyValueAccess values;
-        private final InySectionValue rootNode;
+        private final List<Token> tokens;
+        private final InySource source;
+        private final Iny context;
 
-        private DefaultInyConfig(InyValueAccess values, InySectionValue root) {
+        private DefaultInyConfig(InyValueAccess values, InySectionValue root, List<Token> tokens, InySource source, Iny context) {
             super(values, root, "");
-            this.values = values;
-            this.rootNode = root;
+            this.tokens = tokens;
+            this.source = source;
+            this.context = context;
         }
 
         @Override
@@ -233,11 +237,81 @@ public final class InyConfigs {
             return set(path, inyNull);
         }
 
-        private InyConfig set(String path, InyValue newValue) {
-            InySectionValue updatedRootNode = this.rootNode.set(path, newValue);
-
-            return new DefaultInyConfig(this.values, updatedRootNode);
+        @Override
+        public void save(Path path) throws IOException {
+            Files.writeString(path, source.text());
         }
+
+        private InyConfig set(String path, InyValue newValue) {
+            List<String> segments = Utils.segments(path);
+            int scanIndex = getScanIndex(path, segments);
+            while (scanIndex < tokens.size() && tokens.get(scanIndex).type() == TokenType.COLON) {
+                scanIndex++;
+            }
+
+            if (scanIndex >= tokens.size()) {
+                throw new IllegalStateException("Malformed config: Missing value after key.");
+            }
+
+            Token startValueToken = tokens.get(scanIndex);
+            Token endValueToken = startValueToken;
+
+            while (scanIndex < tokens.size()) {
+                TokenType nextType = tokens.get(scanIndex).type();
+                if (nextType == TokenType.IDENTIFIER ||
+                        nextType == TokenType.RIGHT_BRACE ||
+                        nextType == TokenType.EOF) {
+                    break;
+                }
+                endValueToken = tokens.get(scanIndex);
+                scanIndex++;
+            }
+
+            int startOffset = startValueToken.position().offset();
+            int endOffset = endValueToken.position().offset() + endValueToken.lexeme().length();
+
+            StringBuilder builder = new StringBuilder(source.text());
+            builder.replace(startOffset, endOffset, " " + newValue.toText() + "\n");
+
+            InySource newSource = new InySource(source.name(), builder.toString());
+            return context.parse(newSource);
+        }
+
+        private int getScanIndex(String path, List<String> segments) {
+            int currentSegmentIndex = 0;
+
+            int keyTokenIndex = -1;
+            int currentDepth = 0;
+
+            for (int i = 0; i < tokens.size(); i++) {
+                Token token = tokens.get(i);
+
+                if (token.type() == TokenType.LEFT_BRACE) {
+                    currentDepth++;
+                } else if (token.type() == TokenType.RIGHT_BRACE) {
+                    currentDepth--;
+                }
+
+                if (token.type() == TokenType.IDENTIFIER &&
+                        token.lexeme().equals(segments.get(currentSegmentIndex)) &&
+                        currentDepth == currentSegmentIndex) {
+
+                    currentSegmentIndex++;
+
+                    if (currentSegmentIndex == segments.size()) {
+                        keyTokenIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (keyTokenIndex == -1) {
+                throw new IllegalArgumentException("Path not found: " + path);
+            }
+
+            return keyTokenIndex + 1;
+        }
+
     }
 
     private static final class DefaultInySection extends AbstractInySection {
