@@ -52,8 +52,10 @@ public final class InyConfigs {
         @Override
         public Map<String, Object> entries() {
             LinkedHashMap<String, Object> entries = new LinkedHashMap<>();
-            section.entries().forEach((key, value) ->
-                    entries.put(key, values.resolve(value, Object.class, childPath(key))));
+            section.entries().forEach((key, entry) -> {
+                InyValue value = entry.value();
+                entries.put(key, values.resolve(value, Object.class, childPath(key)));
+            });
             return Collections.unmodifiableMap(entries);
         }
 
@@ -125,25 +127,30 @@ public final class InyConfigs {
             return Collections.unmodifiableList(decoded);
         }
 
-        private Optional<InyValue> resolve(String relativePath, String fullPath, boolean required) {
+        protected Optional<InyValue> resolve(String relativePath, String fullPath, boolean required) {
+            Optional<InyEntry> entry = resolveEntry(relativePath, fullPath, required);
+            return entry.map(InyEntry::value);
+        }
+
+        protected Optional<InyEntry> resolveEntry(String relativePath, String fullPath, boolean required) {
             InyPath path = InyPath.parse(relativePath);
             InySectionValue current = section;
 
             for (int index = 0; index < path.segments().size(); index++) {
                 String segment = path.segments().get(index);
-                InyValue value = current.entries().get(segment);
+                InyEntry entry = current.entries().get(segment);
                 boolean finalSegment = index == path.segments().size() - 1;
-                if (value == null) {
+                if (entry == null) {
                     if (required) {
                         throw new InyMissingValueException(fullPath, segment, index, finalSegment);
                     }
                     return Optional.empty();
                 }
                 if (finalSegment) {
-                    return Optional.of(value);
+                    return Optional.of(entry);
                 }
-                if (!(value instanceof InySectionValue childSection)) {
-                    throw new InyPathTraversalException(fullPath, segment, value.actualType());
+                if (!(entry.value() instanceof InySectionValue childSection)) {
+                    throw new InyPathTraversalException(fullPath, segment, entry.value().actualType());
                 }
                 current = childSection;
             }
@@ -157,20 +164,6 @@ public final class InyConfigs {
 
         private String childPath(String key) {
             return basePath.isEmpty() ? key : basePath + "." + key;
-        }
-
-        @Override
-        public boolean equals(Object object) {
-            if (this == object) return true;
-            if (object instanceof AbstractInySection other) {
-                return section.equals(other.section);
-            }
-            return object instanceof InySection other && entries().equals(other.entries());
-        }
-
-        @Override
-        public int hashCode() {
-            return section.hashCode();
         }
 
         @Override
@@ -243,35 +236,12 @@ public final class InyConfigs {
         }
 
         private InyConfig set(String path, InyValue newValue) {
-            List<String> segments = Utils.segments(path);
-            int scanIndex = getScanIndex(path, segments);
-            while (scanIndex < tokens.size() && tokens.get(scanIndex).type() == TokenType.COLON) {
-                scanIndex++;
-            }
-
-            if (scanIndex >= tokens.size()) {
-                throw new IllegalStateException("Malformed config: Missing value after key.");
-            }
-
-            Token startValueToken = tokens.get(scanIndex);
-            Token endValueToken = startValueToken;
-
-            while (scanIndex < tokens.size()) {
-                TokenType nextType = tokens.get(scanIndex).type();
-                if (nextType == TokenType.IDENTIFIER ||
-                        nextType == TokenType.RIGHT_BRACE ||
-                        nextType == TokenType.EOF) {
-                    break;
-                }
-                endValueToken = tokens.get(scanIndex);
-                scanIndex++;
-            }
-
-            int startOffset = startValueToken.position().offset();
-            int endOffset = endValueToken.position().offset() + endValueToken.lexeme().length();
+            InyEntry entry = resolveEntry(path, path, true).orElseThrow();
+            int startOffset = entry.start().offset();
+            int endOffset = startOffset + entry.length();
 
             StringBuilder builder = new StringBuilder(source.text());
-            builder.replace(startOffset, endOffset, " " + newValue.toText() + "\n");
+            builder.replace(startOffset, endOffset, " " + newValue.toText());
 
             InySource newSource = new InySource(source.name(), builder.toString());
             return context.parse(newSource);
@@ -311,7 +281,6 @@ public final class InyConfigs {
 
             return keyTokenIndex + 1;
         }
-
     }
 
     private static final class DefaultInySection extends AbstractInySection {
@@ -319,5 +288,6 @@ public final class InyConfigs {
         private DefaultInySection(InyValueAccess values, InySectionValue section, String path) {
             super(values, section, path);
         }
+
     }
 }

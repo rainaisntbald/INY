@@ -7,6 +7,7 @@ import net.iridiummc.iny.exception.InyNotProviderException;
 import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.runtime.InyRunnable;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
@@ -181,6 +182,7 @@ public interface InySection {
         }
         return Collections.unmodifiableList(decoded);
     }
+
 
     private static <T> T cast(String path, Object value, Class<T> type) {
         if (value == null) {

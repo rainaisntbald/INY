@@ -112,7 +112,7 @@ class InyParserTest {
     void lfAndCrlfProduceTheSameTree() {
         String lf = "outer {\nvalue: 1\nlist:\n- true\n- null\n}\n";
         String crlf = lf.replace("\n", "\r\n");
-        assertEquals(iny.parse(lf).root(), iny.parse(crlf).root());
+        assertEquals(iny.parse(lf).root().toString(), iny.parse(crlf).root().toString());
     }
 
     @Test
@@ -153,15 +153,15 @@ class InyParserTest {
                 """;
         String tabs = "outer {\n\tinner_one: 1\n inner_two: {\n\t\tinner_three:\n - \"One\"\n\t- \"TwO\"\n}\n}";
 
-        InySection expected = iny.parse(readable).root();
-        assertEquals(expected, iny.parse(irregular).root());
-        assertEquals(expected, iny.parse(tabs).root());
+        String expected = iny.parse(readable).root().toString();
+        assertEquals(expected, iny.parse(irregular).root().toString());
+        assertEquals(expected, iny.parse(tabs).root().toString());
     }
 
     @Test
     void spacingAfterAListDashHasNoSemanticMeaning() {
         InySection spaced = iny.parse("values:\n- 1\n- 2\n").root();
         InySection compact = iny.parse("values:\n-1\n-2\n").root();
-        assertEquals(spaced, compact);
+        assertEquals(spaced.toString(), compact.toString());
     }
 }

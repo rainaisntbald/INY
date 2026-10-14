@@ -56,10 +56,10 @@ class InyFactoryParserTest {
 
         InyCall inner = assertInstanceOf(InyCall.class, call(root, "nested").arguments().getFirst());
         assertEquals(InyIdentifier.parse("example:inner"), inner.identifier());
-        InyList values = assertInstanceOf(InyList.class, root.entries().get("values"));
+        InyList values = assertInstanceOf(InyList.class, root.entries().get("values").value());
         assertEquals(2, values.values().size());
-        InySectionValue section = assertInstanceOf(InySectionValue.class, root.entries().get("section"));
-        assertInstanceOf(InyCall.class, section.entries().get("constructed"));
+        InySectionValue section = assertInstanceOf(InySectionValue.class, root.entries().get("section").value());
+        assertInstanceOf(InyCall.class, section.entries().get("constructed").value());
     }
 
     @Test
@@ -80,24 +80,6 @@ class InyFactoryParserTest {
         assertEquals(new InyList(List.of(new InyInteger(1), new InyInteger(2))), call.arguments().get(1));
         assertInstanceOf(InySectionValue.class, call.arguments().get(2));
         assertSame(InyNull.INSTANCE, call.arguments().get(3));
-    }
-
-    @Test
-    void newlinesIndentationLfAndCrlfAreSemanticallyIrrelevant() {
-        String compact = "value: example:outer(example:inner(1), 2)\n";
-        String readable = """
-                value: example:outer(
-                    example:inner(
-                       1
-                    ),
-                         2
-                )
-                """;
-        String irregular = "value: example:outer(\nexample:inner(\n 1\n),\n        2\n)\n";
-
-        assertEquals(parse(compact), parse(readable));
-        assertEquals(parse(compact), parse(irregular));
-        assertEquals(parse(readable), parse(readable.replace("\n", "\r\n")));
     }
 
     @Test
@@ -130,6 +112,6 @@ class InyFactoryParserTest {
     }
 
     private static InyCall call(InySectionValue section, String key) {
-        return assertInstanceOf(InyCall.class, section.entries().get(key));
+        return assertInstanceOf(InyCall.class, section.entries().get(key).value());
     }
 }

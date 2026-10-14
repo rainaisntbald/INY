@@ -2,6 +2,7 @@ package net.iridiummc.iny.internal.parser;
 
 import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.exception.InyParseException;
+import net.iridiummc.iny.internal.config.InyEntry;
 import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.lexer.TokenType;
 import net.iridiummc.iny.source.InySource;
@@ -44,13 +45,13 @@ public final class Parser {
     }
 
     private InySectionValue parseEntries(TokenType terminator) {
-        Map<String, InyValue> entries = new LinkedHashMap<>();
+        Map<String, InyEntry> entries = new LinkedHashMap<>();
         Map<String, SourcePosition> keyPositions = new LinkedHashMap<>();
 
         while (!check(terminator) && !check(TokenType.EOF)) {
             Token key = consume(TokenType.IDENTIFIER, "a bare key",
                     "Every section entry must begin with a key");
-            InyValue value = parseEntryValue(key);
+            InyEntry value = parseEntry(key);
 
             SourcePosition previous = keyPositions.putIfAbsent(key.value(), key.position());
             if (previous != null) {
@@ -78,31 +79,55 @@ public final class Parser {
         return new InySectionValue(entries);
     }
 
-    private InyValue parseEntryValue(Token key) {
-        if (match(TokenType.LEFT_BRACE)) {
-            return parseBracedSection();
+    private InyEntry parseEntry(Token key) {
+        SourcePosition start = null;
+        InyValue value = null;
+
+        if (check(TokenType.LEFT_BRACE)) {
+            start = advance().position();
+            value = parseBracedSection();
         }
-        if (!match(TokenType.COLON)) {
+
+        if (!check(TokenType.COLON) && value == null) {
             throw error(peek(), "':' or '{' after key '" + key.value() + "'",
                     "Missing structural separator after key");
         }
 
-        if (match(TokenType.LEFT_BRACE)) {
-            return parseBracedSection();
+        if(value == null) {
+            advance();
         }
+
+        if (check(TokenType.LEFT_BRACE)) {
+            start = advance().position();
+            value = parseBracedSection();
+        }
+
         if (check(TokenType.NEWLINE)) {
             skipNewlines();
             if (check(TokenType.LEFT_BRACE)) {
-                advance();
-                return parseBracedSection();
+                start = advance().position();
+                value = parseBracedSection();
             }
             if (isListMarker(peek())) {
-                return parseList(false);
+                start = peek().position();
+                value = parseList(false);
             }
-            throw error(peek(), "'{' or a dash list after the line boundary",
-                    "A value placed after a key's newline must be structural");
+            if(value == null) {
+                throw error(peek(), "'{' or a dash list after the line boundary",
+                        "A value placed after a key's newline must be structural");
+            }
         }
-        return parseValue();
+
+        if(value == null) {
+            start = peek().position();
+            value = parseValue();
+        }
+
+        Token lastToken = peekPrevious();
+        int lastTokenEndOffset = lastToken.position().offset() + lastToken.lexeme().length();
+        int valueLength = lastTokenEndOffset - start.offset();
+
+        return new InyEntry(value, start, valueLength);
     }
 
     private InySectionValue parseBracedSection() {
@@ -299,6 +324,10 @@ public final class Parser {
             current++;
         }
         return token;
+    }
+
+    private Token peekPrevious() {
+        return tokens.get(current - 1);
     }
 
     private Token peek() {

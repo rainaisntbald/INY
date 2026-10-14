@@ -1,7 +1,6 @@
 package net.iridiummc.iny.internal.value;
 
 import net.iridiummc.iny.internal.Utils;
-import net.iridiummc.iny.source.SourcePosition;
 
 import java.util.Objects;
 
