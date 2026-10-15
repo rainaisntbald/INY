@@ -16,11 +16,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class InyAnnotatedRegistrationTest {
 
@@ -30,7 +26,7 @@ class InyAnnotatedRegistrationTest {
         InyConfig config = Iny.builder().registerAnnotated(library).build().parse(
                 "action: annotated:capture(7, \"message\")");
 
-        assertEquals(null, library.received.get());
+        assertNull(library.received.get());
         config.getRunnable("action").run(InyRuntimeContext.empty());
         assertEquals("7:message", library.received.get());
     }
@@ -130,7 +126,7 @@ class InyAnnotatedRegistrationTest {
                 () -> config.getRunnable("action"));
         assertEquals(0, failure.argumentIndex());
         assertEquals(int.class, failure.requestedType());
-        assertEquals(null, library.received.get());
+        assertNull(library.received.get());
     }
 
     @Test
@@ -233,18 +229,13 @@ class InyAnnotatedRegistrationTest {
         }
     }
 
-    private static final class ThrowingLibrary {
-        private final IllegalStateException cause;
-
-        private ThrowingLibrary(IllegalStateException cause) {
-            this.cause = cause;
-        }
+    private record ThrowingLibrary(IllegalStateException cause) {
 
         @InyRunnable("annotated:throwing")
-        private void throwing() {
-            throw cause;
+            private void throwing() {
+                throw cause;
+            }
         }
-    }
 
     private static final class IgnoredLibrary {
         private final AtomicInteger calls = new AtomicInteger();

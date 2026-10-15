@@ -202,7 +202,7 @@ public interface InySection {
 
     private static <T> T checkedProviderResult(String path, Object result, Class<T> type) {
         Class<?> boxedType = boxed(type);
-        if (result == null || !boxedType.isInstance(result)) {
+        if (!boxedType.isInstance(result)) {
             throw new InyInvalidProviderResultException(path, type, result);
         }
         @SuppressWarnings("unchecked")

@@ -10,10 +10,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-/** Internal immutable context-key registry implementation. */
-public final class ImmutableInyContextKeyRegistry implements InyContextKeyRegistry {
-
-    private final Map<InyIdentifier, InyContextKey<?>> entries;
+/**
+ * Internal immutable context-key registry implementation.
+ */
+public record ImmutableInyContextKeyRegistry(
+        Map<InyIdentifier, InyContextKey<?>> entries) implements InyContextKeyRegistry {
 
     public ImmutableInyContextKeyRegistry(Map<InyIdentifier, InyContextKey<?>> entries) {
         Objects.requireNonNull(entries, "entries");
@@ -36,11 +37,6 @@ public final class ImmutableInyContextKeyRegistry implements InyContextKeyRegist
     @Override
     public Optional<InyContextKey<?>> find(InyIdentifier identifier) {
         return Optional.ofNullable(entries.get(Objects.requireNonNull(identifier, "identifier")));
-    }
-
-    @Override
-    public Map<InyIdentifier, InyContextKey<?>> entries() {
-        return entries;
     }
 
     public static IllegalArgumentException incompatible(

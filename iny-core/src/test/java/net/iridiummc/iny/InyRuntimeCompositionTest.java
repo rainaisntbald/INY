@@ -17,11 +17,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class InyRuntimeCompositionTest {
 
@@ -209,7 +205,7 @@ class InyRuntimeCompositionTest {
         InyInvalidProviderResultException nullFailure = assertThrows(
                 InyInvalidProviderResultException.class,
                 () -> nullable.getProvider("value", String.class).resolve(InyRuntimeContext.empty()));
-        assertEquals(null, nullFailure.actualType());
+        assertNull(nullFailure.actualType());
     }
 
     @Test

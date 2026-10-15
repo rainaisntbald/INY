@@ -23,13 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class InyFactoryTest {
 
@@ -173,7 +167,7 @@ class InyFactoryTest {
         assertEquals(1, type.argumentIndex());
         assertEquals(Integer.class, type.requestedType());
         assertEquals("string", type.actualType());
-        assertTrue(type.getCause() != null);
+        assertNotNull(type.getCause());
 
         InyFactoryArgumentException missing = assertThrows(InyFactoryArgumentException.class,
                 () -> Iny.builder()
