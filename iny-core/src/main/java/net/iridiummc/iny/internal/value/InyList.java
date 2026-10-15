@@ -2,6 +2,7 @@ package net.iridiummc.iny.internal.value;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.StringJoiner;
 
 /** Internal immutable list node. */
 public record InyList(List<InyValue> values) implements InyValue {
@@ -18,13 +19,11 @@ public record InyList(List<InyValue> values) implements InyValue {
 
     @Override
     public String toText() {
-        StringBuilder builder = new StringBuilder();
-        builder.append("\n");
-
+        StringJoiner joiner = new StringJoiner(", ");
         for(InyValue value : values) {
-            builder.append(value.toText());
+            joiner.add(value.toText());
         }
 
-        return builder.toString();
+        return "[" + joiner + "]";
     }
 }

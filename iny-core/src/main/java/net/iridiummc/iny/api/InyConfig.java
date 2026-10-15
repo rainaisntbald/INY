@@ -64,10 +64,30 @@ public interface InyConfig extends InySection {
     InyConfig setBoolean(String path, Boolean newValue);
 
     /** Sets the value of the path to an integer value */
-    InyConfig setInteger(String path, BigInteger integer);
+    InyConfig setInteger(String path, BigInteger newValue);
 
     /** Sets the value of the path to a decimal value */
-    InyConfig setDecimal(String path, BigDecimal decimal);
+    InyConfig setDecimal(String path, BigDecimal newValue);
+
+    /** Sets the value of the path to a string list value */
+    InyConfig setStringList(String path, List<String> newValue);
+
+    /** Sets the value of the path to a boolean list value */
+    InyConfig setBooleanList(String path, List<Boolean> newValue);
+
+    /** Sets the value of the path to an integer list value */
+    InyConfig setIntegerList(String path, List<BigInteger> newValue, BigInteger... reify);
+
+    default InyConfig setIntegerList(String path, List<Integer> newValue, Integer... reify) {
+        return setIntegerList(path, newValue.stream().map(BigInteger::valueOf).toList());
+    }
+
+    default InyConfig setIntegerList(String path, List<Long> newValue, Long... reify) {
+        return setIntegerList(path, newValue.stream().map(BigInteger::valueOf).toList());
+    }
+
+    /** Sets the value of the path to a decimal list value */
+    InyConfig setDecimalList(String path, List<BigDecimal> newValue);
 
     /** Sets the value of the path to null */
     InyConfig setNull(String path);
@@ -75,22 +95,22 @@ public interface InyConfig extends InySection {
     void save(Path path) throws IOException;
 
     /** Sets the value of the path to an integer value */
-    default InyConfig setInteger(String path, Integer integer) {
-        return setInteger(path, BigInteger.valueOf(integer));
+    default InyConfig setInteger(String path, Integer newValue) {
+        return setInteger(path, BigInteger.valueOf(newValue));
     }
 
     /** Sets the value of the path to an integer value */
-    default InyConfig setInteger(String path, Long integer) {
-        return setInteger(path, BigInteger.valueOf(integer));
+    default InyConfig setInteger(String path, Long newValue) {
+        return setInteger(path, BigInteger.valueOf(newValue));
     }
 
     /** Sets the value of the path to a decimal value */
-    default InyConfig setDecimal(String path, Double decimal) {
-        return setDecimal(path, BigDecimal.valueOf(decimal));
+    default InyConfig setDecimal(String path, Double newValue) {
+        return setDecimal(path, BigDecimal.valueOf(newValue));
     }
 
     /** Sets the value of the path to a decimal value */
-    default InyConfig setDecimal(String path, Float decimal) {
-        return setDecimal(path, BigDecimal.valueOf(decimal));
+    default InyConfig setDecimal(String path, Float newValue) {
+        return setDecimal(path, BigDecimal.valueOf(newValue));
     }
 }

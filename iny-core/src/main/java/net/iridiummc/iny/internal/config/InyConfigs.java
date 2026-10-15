@@ -231,6 +231,34 @@ public final class InyConfigs {
         }
 
         @Override
+        public InyConfig setStringList(String path, List<String> newValue) {
+            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyString(raw)).toList();
+            InyList list = new InyList(values);
+            return set(path, list);
+        }
+
+        @Override
+        public InyConfig setBooleanList(String path, List<Boolean> newValue) {
+            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyBoolean(raw)).toList();
+            InyList list = new InyList(values);
+            return set(path, list);
+        }
+
+        @Override
+        public InyConfig setIntegerList(String path, List<BigInteger> newValue, BigInteger... reify) {
+            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyInteger(raw)).toList();
+            InyList list = new InyList(values);
+            return set(path, list);
+        }
+
+        @Override
+        public InyConfig setDecimalList(String path, List<BigDecimal> newValue) {
+            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyDecimal(raw)).toList();
+            InyList list = new InyList(values);
+            return set(path, list);
+        }
+
+        @Override
         public void save(Path path) throws IOException {
             Files.writeString(path, source.text());
         }

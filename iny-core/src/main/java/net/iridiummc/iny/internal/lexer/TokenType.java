@@ -1,6 +1,6 @@
 package net.iridiummc.iny.internal.lexer;
 
-/** Internal token kinds. This package is not part of the public INY API. */
+/** Internal token kinds */
 public enum TokenType {
     IDENTIFIER,
     NAMESPACED_IDENTIFIER,
@@ -13,6 +13,8 @@ public enum TokenType {
     RIGHT_PARENTHESIS,
     COMMA,
     DASH,
+    LEFT_SQUARE,
+    RIGHT_SQUARE,
     NEWLINE,
     EOF
 }
