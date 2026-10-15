@@ -6,7 +6,6 @@ import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.lexer.Token;
-import net.iridiummc.iny.internal.lexer.TokenType;
 import net.iridiummc.iny.internal.path.InyPath;
 import net.iridiummc.iny.internal.value.*;
 import net.iridiummc.iny.runtime.InyProvider;
@@ -28,7 +27,7 @@ public final class InyConfigs {
 
     /** Creates an immutable root configuration view. */
     public static InyConfig create(InyValueAccess values, InySectionValue root, List<Token> tokens, InySource source, Iny context) {
-        return new DefaultInyConfig(values, root, tokens, source, context);
+        return new DefaultInyConfig(values, root, source, context);
     }
 
     /** Creates a navigable public view over an internal section node. */
@@ -173,13 +172,11 @@ public final class InyConfigs {
 
     private static final class DefaultInyConfig extends AbstractInySection implements InyConfig {
 
-        private final List<Token> tokens;
         private final InySource source;
         private final Iny context;
 
-        private DefaultInyConfig(InyValueAccess values, InySectionValue root, List<Token> tokens, InySource source, Iny context) {
+        private DefaultInyConfig(InyValueAccess values, InySectionValue root, InySource source, Iny context) {
             super(values, root, "");
-            this.tokens = tokens;
             this.source = source;
             this.context = context;
         }
@@ -272,41 +269,6 @@ public final class InyConfigs {
 
             InySource newSource = new InySource(source.name(), builder.toString());
             return context.parse(newSource);
-        }
-
-        private int getScanIndex(String path, List<String> segments) {
-            int currentSegmentIndex = 0;
-
-            int keyTokenIndex = -1;
-            int currentDepth = 0;
-
-            for (int i = 0; i < tokens.size(); i++) {
-                Token token = tokens.get(i);
-
-                if (token.type() == TokenType.LEFT_BRACE) {
-                    currentDepth++;
-                } else if (token.type() == TokenType.RIGHT_BRACE) {
-                    currentDepth--;
-                }
-
-                if (token.type() == TokenType.IDENTIFIER &&
-                        token.lexeme().equals(segments.get(currentSegmentIndex)) &&
-                        currentDepth == currentSegmentIndex) {
-
-                    currentSegmentIndex++;
-
-                    if (currentSegmentIndex == segments.size()) {
-                        keyTokenIndex = i;
-                        break;
-                    }
-                }
-            }
-
-            if (keyTokenIndex == -1) {
-                throw new IllegalArgumentException("Path not found: " + path);
-            }
-
-            return keyTokenIndex + 1;
         }
     }
 

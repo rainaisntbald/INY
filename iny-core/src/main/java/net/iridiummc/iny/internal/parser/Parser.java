@@ -12,7 +12,6 @@ import net.iridiummc.iny.source.SourcePosition;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
-import java.util.logging.Logger;
 
 /** Recursive-descent parser for the position-aware INY token stream. */
 public final class Parser {
@@ -130,7 +129,6 @@ public final class Parser {
 
     private InyList parseList(boolean stopBeforeStandaloneDash) {
         List<InyValue> values = new ArrayList<>();
-        SourcePosition listPosition = peek().position();
 
         while (isListMarker(peek())) {
             advance();
@@ -158,7 +156,7 @@ public final class Parser {
             }
             skipNewlines();
 
-            if (stopBeforeStandaloneDash && !values.isEmpty() && isStandaloneDash()) {
+            if (stopBeforeStandaloneDash && isStandaloneDash()) {
                 break;
             }
             if (isListMarker(peek())) {
@@ -178,14 +176,11 @@ public final class Parser {
             throw error(peek(), "at least one dash entry", "Empty dash lists have no representation in INY v1");
         }
 
-        InyList list = new InyList(values);
-        if(!mixedListChecker(list).isValid) mixedListWarning(listPosition);
-        return list;
+        return new InyList(values);
     }
 
     private InyList parseInlineList() {
         List<InyValue> values = new ArrayList<>();
-        SourcePosition listPosition = peekPrevious().position();
         skipNewlines();
 
         boolean continueFlag = !check(TokenType.RIGHT_SQUARE);
@@ -201,45 +196,7 @@ public final class Parser {
 
         advance();
 
-        InyList list = new InyList(values);
-
-        if(!mixedListChecker(list).isValid) mixedListWarning(listPosition);
-        return list;
-    }
-
-    private MixedListResult mixedListChecker(InyValue value) {
-        if(value instanceof InyList(List<InyValue> values)) {
-            MixedListResult ERROR_RETURN = new MixedListResult(Optional.empty(), -1, false);
-
-            if(values.isEmpty()) return new MixedListResult(Optional.empty(), 1, true);
-            List<MixedListResult> results = values.stream().map(this::mixedListChecker).toList();
-
-            int depth = results.getFirst().depth;
-            Optional<Class<? extends InyValue>> clazz = Optional.empty();
-
-            for(MixedListResult result : results) {
-                if(!result.isValid) return ERROR_RETURN;
-                if(result.depth != depth) return ERROR_RETURN;
-                if(result.clazz.isPresent()) {
-                    if(clazz.isEmpty()) clazz = result.clazz;
-                    if(!clazz.equals(result.clazz)) return ERROR_RETURN;
-                }
-            }
-            return new MixedListResult(clazz, depth + 1, true);
-        }
-        return new MixedListResult(Optional.of(value.getClass()), 0, true);
-    }
-
-    private record MixedListResult(Optional<Class<? extends InyValue>> clazz, int depth, boolean isValid) {
-    };
-
-    private void mixedListWarning(SourcePosition listPosition) {
-        Logger.getLogger("net.iridiummc.INY").warning(String.format(
-                "You are using a mixed list in\n%s at line %d, column %d\nMixed type lists will be deprecated in 2.0.0",
-                listPosition.sourceName(),
-                listPosition.line(),
-                listPosition.column()
-        ));
+        return new InyList(values);
     }
 
     private InyValue parseValue() {
