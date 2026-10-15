@@ -5,24 +5,14 @@ import net.iridiummc.iny.exception.InyParseException;
 import net.iridiummc.iny.internal.config.InyEntry;
 import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.lexer.TokenType;
+import net.iridiummc.iny.internal.value.*;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.source.SourcePosition;
-import net.iridiummc.iny.internal.value.InyBoolean;
-import net.iridiummc.iny.internal.value.InyCall;
-import net.iridiummc.iny.internal.value.InyDecimal;
-import net.iridiummc.iny.internal.value.InyInteger;
-import net.iridiummc.iny.internal.value.InyList;
-import net.iridiummc.iny.internal.value.InyNull;
-import net.iridiummc.iny.internal.value.InySectionValue;
-import net.iridiummc.iny.internal.value.InyString;
-import net.iridiummc.iny.internal.value.InyValue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /** Recursive-descent parser for the position-aware INY token stream. */
 public final class Parser {
@@ -196,15 +186,19 @@ public final class Parser {
     private InyList parseInlineList() {
         List<InyValue> values = new ArrayList<>();
         SourcePosition listPosition = peekPrevious().position();
+        skipNewlines();
 
-        boolean continueFlag = true;
+        boolean continueFlag = !check(TokenType.RIGHT_SQUARE);
 
         while(continueFlag) {
+            skipNewlines();
             values.add(parseValue());
+            skipNewlines();
             if(!check(TokenType.RIGHT_SQUARE)) consume(TokenType.COMMA, ", or ]",
                     "Inline lists must be comma separated and surrounded by square brackets");
             else continueFlag = false;
         }
+
         advance();
 
         InyList list = new InyList(values);
@@ -345,6 +339,7 @@ public final class Parser {
                 || token.type() == TokenType.IDENTIFIER
                 || token.type() == TokenType.NAMESPACED_IDENTIFIER
                 || token.type() == TokenType.LEFT_BRACE
+                || token.type() == TokenType.LEFT_SQUARE
                 || isListMarker(token);
     }
 
