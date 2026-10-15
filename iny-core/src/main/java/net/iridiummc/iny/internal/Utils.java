@@ -40,7 +40,7 @@ public class Utils {
                 case '\r' -> sb.append("\\r");
                 case '\t' -> sb.append("\\t");
                 default   -> {
-                    // Just in case of weird unicode characters
+                    // Just in case of weird Unicode characters
                     if (currentChar < 0x20 || (currentChar >= 0x7F && currentChar <= 0x9F)) {
                         sb.append(String.format("\\u%04x", (int) currentChar));
                     } else {
