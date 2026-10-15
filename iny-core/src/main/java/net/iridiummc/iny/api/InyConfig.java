@@ -1,12 +1,7 @@
 package net.iridiummc.iny.api;
 
-import com.google.errorprone.annotations.CheckReturnValue;
 import net.iridiummc.iny.value.InySection;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,63 +53,63 @@ public interface InyConfig extends InySection {
     /** Returns a required immutable list whose elements are decoded as the requested type. */
     <T> List<T> getList(String path, Class<T> type);
 
-    /** Sets the value of the path to a {@code String} value */
+    /** Sets the value of the path to a {@code String} value *//*
     @CheckReturnValue
     InyConfig setString(String path, String newValue);
 
-    /** Sets the value of the path to a {@code Boolean} value */
+    *//** Sets the value of the path to a {@code Boolean} value *//*
     @CheckReturnValue
     InyConfig setBoolean(String path, Boolean newValue);
 
 
-    /** Sets the value of the path to a {@code BigInteger} value */
+    *//** Sets the value of the path to a {@code BigInteger} value *//*
     @CheckReturnValue
     InyConfig setInteger(String path, BigInteger newValue);
 
-    /** Sets the value of the path to an {@code Integer} value */
+    *//** Sets the value of the path to an {@code Integer} value *//*
     @CheckReturnValue
     default InyConfig setInteger(String path, Integer newValue) {
         return setInteger(path, BigInteger.valueOf(newValue));
     }
 
-    /** Sets the value of the path to a {@code Long} value */
+    *//** Sets the value of the path to a {@code Long} value *//*
     @CheckReturnValue
     default InyConfig setInteger(String path, Long newValue) {
         return setInteger(path, BigInteger.valueOf(newValue));
     }
 
 
-    /** Sets the value of the path to a {@code BigDecimal} value */
+    *//** Sets the value of the path to a {@code BigDecimal} value *//*
     @CheckReturnValue
     InyConfig setDecimal(String path, BigDecimal newValue);
 
-    /** Sets the value of the path to a {@code Double} value */
+    *//** Sets the value of the path to a {@code Double} value *//*
     @CheckReturnValue
     default InyConfig setDecimal(String path, Double newValue) {
         return setDecimal(path, BigDecimal.valueOf(newValue));
     }
 
-    /** Sets the value of the path to a {@code Float} value */
+    *//** Sets the value of the path to a {@code Float} value *//*
     @CheckReturnValue
     default InyConfig setDecimal(String path, Float newValue) {
         return setDecimal(path, BigDecimal.valueOf(newValue));
     }
 
 
-    /** Sets the value of the path to a {@code List<String>} value */
+    *//** Sets the value of the path to a {@code List<String>} value *//*
     @CheckReturnValue
     InyConfig setStringList(String path, List<String> newValue);
 
-    /** Sets the value of the path to a {@code List<Boolean>} list value */
+    *//** Sets the value of the path to a {@code List<Boolean>} list value *//*
     @CheckReturnValue
     InyConfig setBooleanList(String path, List<Boolean> newValue);
 
 
-    /** Sets the value of the path to a {@code List<BigInteger>} value */
+    *//** Sets the value of the path to a {@code List<BigInteger>} value *//*
     @CheckReturnValue
     InyConfig setBigIntegerList(String path, List<BigInteger> newValue);
 
-    /** Sets the value of the path to a {@code List<Integer>} value */
+    *//** Sets the value of the path to a {@code List<Integer>} value *//*
     @CheckReturnValue
     default InyConfig setIntegerList(String path, List<Integer> newValue) {
         return setBigIntegerList(
@@ -123,7 +118,7 @@ public interface InyConfig extends InySection {
         );
     }
 
-    /** Sets the value of the path to an {@code List<Long>} list value */
+    *//** Sets the value of the path to an {@code List<Long>} list value *//*
     @CheckReturnValue
     default InyConfig setLongList(String path, List<Long> newValue) {
         return setBigIntegerList(
@@ -133,25 +128,25 @@ public interface InyConfig extends InySection {
     }
 
 
-    /** Sets the value of the path to a {@code List<BigDecimal>} value */
+    *//** Sets the value of the path to a {@code List<BigDecimal>} value *//*
     @CheckReturnValue
     InyConfig setBigDecimalList(String path, List<BigDecimal> newValue);
 
-    /** Sets the value of the path to a {@code List<Double>} value */
+    *//** Sets the value of the path to a {@code List<Double>} value *//*
     @CheckReturnValue
     default InyConfig setDoubleList(String path, List<Double> newValue) {
         return setBigDecimalList(path, newValue.stream().map(BigDecimal::valueOf).toList());
     }
 
-    /** Sets the value of the path to a {@code List<Float>} value */
+    *//** Sets the value of the path to a {@code List<Float>} value *//*
     @CheckReturnValue
     default InyConfig setFloatList(String path, List<Float> newValue) {
         return setBigDecimalList(path, newValue.stream().map(BigDecimal::valueOf).toList());
     }
 
-    /** Sets the value of the path to {@code null} */
+    *//** Sets the value of the path to {@code null} *//*
     @CheckReturnValue
     InyConfig setNull(String path);
 
-    void save(Path path) throws IOException;
+    void save(Path path) throws IOException;*/
 }

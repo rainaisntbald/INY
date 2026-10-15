@@ -7,16 +7,13 @@ import net.iridiummc.iny.exception.InyPathTraversalException;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.path.InyPath;
-import net.iridiummc.iny.internal.value.*;
+import net.iridiummc.iny.internal.value.InyList;
+import net.iridiummc.iny.internal.value.InySectionValue;
+import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 /** Internal construction boundary for public configuration and section views. */
@@ -196,7 +193,7 @@ public final class InyConfigs {
             return find(path);
         }
 
-        @Override
+        /*@Override
         public InyConfig setString(String path, String newValue) {
             InyString inyString = new InyString(newValue);
             return set(path, inyString);
@@ -269,7 +266,7 @@ public final class InyConfigs {
 
             InySource newSource = new InySource(source.name(), builder.toString());
             return context.parse(newSource);
-        }
+        }*/
     }
 
     private static final class DefaultInySection extends AbstractInySection {
