@@ -1,18 +1,12 @@
 package net.iridiummc.iny.value;
 
-import net.iridiummc.iny.exception.InyMissingValueException;
-import net.iridiummc.iny.exception.InyPathTraversalException;
-import net.iridiummc.iny.exception.InyInvalidProviderResultException;
-import net.iridiummc.iny.exception.InyNotProviderException;
+import net.iridiummc.iny.exception.*;
 import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.runtime.InyRunnable;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
-
-import static net.iridiummc.iny.internal.Utils.segments;
 
 /**
  * An insertion-ordered, immutable, navigable view of an INY section.
@@ -260,5 +254,27 @@ public interface InySection {
         if (type == double.class) return Double.class;
         if (type == char.class) return Character.class;
         return type;
+    }
+
+    private static List<String> segments(String path) {
+        if (path == null) {
+            throw new InyInvalidPathException("null", "path must not be null");
+        }
+        if (path.isEmpty()) {
+            throw new InyInvalidPathException(path, "path must contain at least one segment");
+        }
+        if (!path.equals(path.trim())) {
+            throw new InyInvalidPathException(path, "leading or trailing whitespace is not allowed");
+        }
+
+        List<String> segments = List.of(path.split("\\.", -1));
+        for (int index = 0; index < segments.size(); index++) {
+            String segment = segments.get(index);
+            if (!segment.matches("[A-Za-z_][A-Za-z0-9_-]*")) {
+                throw new InyInvalidPathException(path,
+                        "segment " + (index + 1) + " ('" + segment + "') is not a valid bare key");
+            }
+        }
+        return segments;
     }
 }
