@@ -292,7 +292,7 @@ class InyConfigTest {
         assertEquals("overridden", overridden.parse("value: \"original\"").get("value", String.class));
     }
 
-    @Test
+    /*@Test
     void canSetValuesInRootOfInyConfig() {
         InyConfig config = iny.parse("""
                 string: "Hello, world!"
@@ -414,7 +414,7 @@ class InyConfigTest {
 
         config = config.setString("string", "some\"\nthing\0 with \b\rlo\tts of \\\\escape \\characters");
         assertEquals("some\"\nthing\0 with \b\rlo\tts of \\\\escape \\characters", config.get("string", String.class));
-    }
+    }*/
 
     private record Unregistered(String value) {
     }

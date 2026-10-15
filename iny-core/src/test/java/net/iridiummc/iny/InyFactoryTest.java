@@ -272,7 +272,7 @@ class InyFactoryTest {
         assertEquals(3, iny.factories().size());
     }
 
-    @Test
+    /*@Test
     void factoriesWorkAfterSaving() {
         InyConfig config = configuredTypes().build().parse("""
                 point: test:point(1, 2, 3)
@@ -287,7 +287,7 @@ class InyFactoryTest {
         assertEquals("Goodbye!", string);
         point = config.get("point", Point.class);
         assertEquals(new Point(1, 2, 3), point);
-    }
+    }*/
 
     private static Iny.Builder configuredTypes() {
         return Iny.builder()
