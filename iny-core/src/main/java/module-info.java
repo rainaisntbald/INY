@@ -2,7 +2,7 @@
  * Core INY parsing, decoding, and factory APIs.
  */
 module net.iridiummc.iny.core {
-    requires java.logging;
+    requires java.logging; requires com.google.errorprone.annotations;
     exports net.iridiummc.iny.annotation;
     exports net.iridiummc.iny.api;
     exports net.iridiummc.iny.codec;
