@@ -57,60 +57,83 @@ public interface InyConfig extends InySection {
     /** Returns a required immutable list whose elements are decoded as the requested type. */
     <T> List<T> getList(String path, Class<T> type);
 
-    /** Sets the value of the path to a string value */
+    /** Sets the value of the path to a {@code String} value */
     InyConfig setString(String path, String newValue);
 
-    /** Sets the value of the path to a boolean value */
+    /** Sets the value of the path to a {@code Boolean} value */
     InyConfig setBoolean(String path, Boolean newValue);
 
-    /** Sets the value of the path to an integer value */
+
+    /** Sets the value of the path to a {@code BigInteger} value */
     InyConfig setInteger(String path, BigInteger newValue);
 
-    /** Sets the value of the path to a decimal value */
-    InyConfig setDecimal(String path, BigDecimal newValue);
-
-    /** Sets the value of the path to a string list value */
-    InyConfig setStringList(String path, List<String> newValue);
-
-    /** Sets the value of the path to a boolean list value */
-    InyConfig setBooleanList(String path, List<Boolean> newValue);
-
-    /** Sets the value of the path to an integer list value */
-    InyConfig setIntegerList(String path, List<BigInteger> newValue, BigInteger... reify);
-
-    default InyConfig setIntegerList(String path, List<Integer> newValue, Integer... reify) {
-        return setIntegerList(path, newValue.stream().map(BigInteger::valueOf).toList());
-    }
-
-    default InyConfig setIntegerList(String path, List<Long> newValue, Long... reify) {
-        return setIntegerList(path, newValue.stream().map(BigInteger::valueOf).toList());
-    }
-
-    /** Sets the value of the path to a decimal list value */
-    InyConfig setDecimalList(String path, List<BigDecimal> newValue);
-
-    /** Sets the value of the path to null */
-    InyConfig setNull(String path);
-
-    void save(Path path) throws IOException;
-
-    /** Sets the value of the path to an integer value */
+    /** Sets the value of the path to an {@code Integer} value */
     default InyConfig setInteger(String path, Integer newValue) {
         return setInteger(path, BigInteger.valueOf(newValue));
     }
 
-    /** Sets the value of the path to an integer value */
+    /** Sets the value of the path to a {@code Long} value */
     default InyConfig setInteger(String path, Long newValue) {
         return setInteger(path, BigInteger.valueOf(newValue));
     }
 
-    /** Sets the value of the path to a decimal value */
+
+    /** Sets the value of the path to a {@code BigDecimal} value */
+    InyConfig setDecimal(String path, BigDecimal newValue);
+
+    /** Sets the value of the path to a {@code Double} value */
     default InyConfig setDecimal(String path, Double newValue) {
         return setDecimal(path, BigDecimal.valueOf(newValue));
     }
 
-    /** Sets the value of the path to a decimal value */
+    /** Sets the value of the path to a {@code Float} value */
     default InyConfig setDecimal(String path, Float newValue) {
         return setDecimal(path, BigDecimal.valueOf(newValue));
     }
+
+
+    /** Sets the value of the path to a {@code List<String>} value */
+    InyConfig setStringList(String path, List<String> newValue);
+
+    /** Sets the value of the path to a {@code List<Boolean>} list value */
+    InyConfig setBooleanList(String path, List<Boolean> newValue);
+
+
+    /** Sets the value of the path to a {@code List<BigInteger>} value */
+    InyConfig setBigIntegerList(String path, List<BigInteger> newValue);
+
+    /** Sets the value of the path to a {@code List<Integer>} value */
+    default InyConfig setIntegerList(String path, List<Integer> newValue) {
+        return setBigIntegerList(
+                path,
+                newValue.stream().map(BigInteger::valueOf).toList()
+        );
+    }
+
+    /** Sets the value of the path to an {@code List<Long>} list value */
+    default InyConfig setLongList(String path, List<Long> newValue) {
+        return setBigIntegerList(
+                path,
+                newValue.stream().map(BigInteger::valueOf).toList()
+        );
+    }
+
+
+    /** Sets the value of the path to a {@code List<BigDecimal>} value */
+    InyConfig setBigDecimalList(String path, List<BigDecimal> newValue);
+
+    /** Sets the value of the path to a {@code List<Double>} value */
+    default InyConfig setDoubleList(String path, List<Double> newValue) {
+        return setBigDecimalList(path, newValue.stream().map(BigDecimal::valueOf).toList());
+    }
+
+    /** Sets the value of the path to a {@code List<Float>} value */
+    default InyConfig setFloatList(String path, List<Float> newValue) {
+        return setBigDecimalList(path, newValue.stream().map(BigDecimal::valueOf).toList());
+    }
+
+    /** Sets the value of the path to {@code null} */
+    InyConfig setNull(String path);
+
+    void save(Path path) throws IOException;
 }

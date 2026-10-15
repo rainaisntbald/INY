@@ -4,15 +4,14 @@ import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyConfig;
 import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
-import net.iridiummc.iny.internal.Utils;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.lexer.TokenType;
 import net.iridiummc.iny.internal.path.InyPath;
 import net.iridiummc.iny.internal.value.*;
+import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
-import net.iridiummc.iny.runtime.InyProvider;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -245,14 +244,14 @@ public final class InyConfigs {
         }
 
         @Override
-        public InyConfig setIntegerList(String path, List<BigInteger> newValue, BigInteger... reify) {
+        public InyConfig setBigIntegerList(String path, List<BigInteger> newValue) {
             List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyInteger(raw)).toList();
             InyList list = new InyList(values);
             return set(path, list);
         }
 
         @Override
-        public InyConfig setDecimalList(String path, List<BigDecimal> newValue) {
+        public InyConfig setBigDecimalList(String path, List<BigDecimal> newValue) {
             List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyDecimal(raw)).toList();
             InyList list = new InyList(values);
             return set(path, list);
