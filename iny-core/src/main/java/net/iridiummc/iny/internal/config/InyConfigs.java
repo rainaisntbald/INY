@@ -165,6 +165,18 @@ public final class InyConfigs {
         public String toString() {
             return "InySection" + entries();
         }
+
+        @Override
+        public boolean equals(Object other) {
+            if(!(other instanceof InySection otherSection)) return false;
+            if(this == other) return true;
+            return this.entries().equals(otherSection.entries());
+        }
+
+        @Override
+        public int hashCode() {
+            return this.entries().hashCode();
+        }
     }
 
     private static final class DefaultInyConfig extends AbstractInySection implements InyConfig {
