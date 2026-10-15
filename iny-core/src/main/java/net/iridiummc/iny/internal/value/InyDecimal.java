@@ -18,6 +18,7 @@ public record InyDecimal(BigDecimal value) implements InyValue {
 
     @Override
     public String toText() {
-        return String.valueOf(value);
+        String text = value.toPlainString();
+        return text.indexOf('.') >= 0 ? text : text + ".0";
     }
 }
