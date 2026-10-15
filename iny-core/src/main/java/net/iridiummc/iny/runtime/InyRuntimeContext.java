@@ -111,12 +111,10 @@ public final class InyRuntimeContext {
     }
 
     private InyContextKey<?> storedKey(InyContextKey<?> key) {
-        for (InyContextKey<?> candidate : values.keySet()) {
-            if (candidate.identifier().equals(key.identifier())) {
-                return candidate;
-            }
-        }
-        return null;
+        return values.keySet().stream()
+                .filter(k -> k.equals(key))
+                .findFirst()
+                .orElse(null);
     }
 
     private static <T> void putChecked(
