@@ -79,11 +79,12 @@ public final class Parser {
     }
 
     private InyEntry parseEntry(Token key) {
-        SourcePosition start = null;
+        SourcePosition keyPosition = key.position();
+        SourcePosition start = new SourcePosition(keyPosition.sourceName(), keyPosition.offset() + key.lexeme().length(), keyPosition.line(), keyPosition.column());
         InyValue value = null;
 
         if (check(TokenType.LEFT_BRACE)) {
-            start = advance().position();
+            advance();
             value = parseBracedSection();
         }
 
@@ -97,18 +98,17 @@ public final class Parser {
         }
 
         if (check(TokenType.LEFT_BRACE)) {
-            start = advance().position();
+            advance();
             value = parseBracedSection();
         }
 
         if (check(TokenType.NEWLINE)) {
             skipNewlines();
             if (check(TokenType.LEFT_BRACE)) {
-                start = advance().position();
+                advance();
                 value = parseBracedSection();
             }
             if (isListMarker(peek())) {
-                start = peek().position();
                 value = parseList(false);
             }
             if(value == null) {
@@ -118,7 +118,6 @@ public final class Parser {
         }
 
         if(value == null) {
-            start = peek().position();
             value = parseValue();
         }
 

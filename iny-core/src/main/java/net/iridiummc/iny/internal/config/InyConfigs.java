@@ -269,7 +269,7 @@ public final class InyConfigs {
             int endOffset = startOffset + entry.length();
 
             StringBuilder builder = new StringBuilder(source.text());
-            builder.replace(startOffset, endOffset, " " + newValue.toText());
+            builder.replace(startOffset, endOffset, ": " + newValue.toText());
 
             InySource newSource = new InySource(source.name(), builder.toString());
             return context.parse(newSource);
