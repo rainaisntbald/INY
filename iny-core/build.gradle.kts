@@ -17,11 +17,3 @@ tasks.withType<Javadoc>().configureEach {
         "net.iridiummc.iny.core=${layout.buildDirectory.dir("classes/java/main").get().asFile.absolutePath}"
     )
 }
-
-sourceSets {
-    test {
-        java {
-            exclude("**/PlaygroundTest.java")
-        }
-    }
-}
