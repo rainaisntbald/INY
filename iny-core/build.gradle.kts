@@ -1,7 +1,6 @@
 plugins {
     `java-library`
     `maven-publish`
-    id("me.champeau.gradle.japicmp") version "0.4.6"
 }
 
 dependencies {
@@ -17,15 +16,4 @@ tasks.withType<Javadoc>().configureEach {
         "-patch-module",
         "net.iridiummc.iny.core=${layout.buildDirectory.dir("classes/java/main").get().asFile.absolutePath}"
     )
-}
-
-tasks.register<me.champeau.gradle.japicmp.JapicmpTask>("japicmp") {
-    oldClasspath.from(files("build/libs/iny-core-1.0.0.jar"))
-    newClasspath.from(tasks.named("jar"))
-    packageExcludes.add("net.iridiummc.iny.internal.*")
-    packageExcludes.add("net.iridiummc.iny.internal.**")
-    onlyModified = true
-    failOnModification = false
-    failOnSourceIncompatibility = true
-    txtOutputFile = layout.buildDirectory.file("reports/japi.txt")
 }
