@@ -71,7 +71,7 @@ final class DefaultInyArguments implements InyArguments {
         Objects.requireNonNull(targetType, "targetType");
         InyValue value = checkedValue(index, targetType);
         String argumentPath = context.path() + "[" + index + "]";
-        final InyProvider<T> provider;
+        InyProvider<T> provider;
         try {
             provider = context.values().provider(value, targetType, argumentPath);
         } catch (RuntimeException exception) {
