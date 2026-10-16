@@ -7,7 +7,6 @@ import net.iridiummc.iny.api.InyModule;
 import net.iridiummc.iny.factory.InyFactoryContext;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -109,7 +108,7 @@ public final class MinecraftInyModule implements InyModule {
 
     @InyRunnable("minecraft:broadcast")
     private void broadcast(Component message) {
-        Bukkit.broadcast(message);
+        server.broadcast(message);
     }
 
     @InyRunnable("minecraft:give_item")
