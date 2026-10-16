@@ -5,7 +5,9 @@ import net.iridiummc.iny.runtime.InyProvider;
 
 import java.util.Objects;
 
-public class Utils {
+public final class Utils {
+    private Utils() {}
+
     public static String escapeString(String string) {
         StringBuilder sb = new StringBuilder();
         for(int i = 0; i < string.length(); i++) {
