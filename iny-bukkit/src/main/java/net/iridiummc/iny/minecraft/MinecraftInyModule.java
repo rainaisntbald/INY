@@ -124,6 +124,9 @@ public final class MinecraftInyModule implements InyModule {
     @InyRunnable("minecraft:set_block")
     private void setBlock(Location location, Material material) {
         World world = location.getWorld();
+        if(world == null) {
+            throw new IllegalArgumentException("Location " + location + " has no world");
+        }
         world.setType(location, material);
     }
 
