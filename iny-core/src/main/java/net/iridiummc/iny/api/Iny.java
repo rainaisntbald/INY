@@ -149,7 +149,7 @@ public final class Iny {
         Objects.requireNonNull(source, "source");
         List<Token> tokens = new Lexer(source).lex();
         InySectionValue root = new Parser(source, tokens).parse();
-        return InyConfigs.create(values, root, tokens, source, this);
+        return InyConfigs.create(values, root);
     }
 
     /**

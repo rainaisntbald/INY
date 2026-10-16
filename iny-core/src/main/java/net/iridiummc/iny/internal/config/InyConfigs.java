@@ -1,17 +1,14 @@
 package net.iridiummc.iny.internal.config;
 
-import net.iridiummc.iny.api.Iny;
 import net.iridiummc.iny.api.InyConfig;
 import net.iridiummc.iny.exception.InyMissingValueException;
 import net.iridiummc.iny.exception.InyPathTraversalException;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
-import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.path.InyPath;
 import net.iridiummc.iny.internal.value.InyList;
 import net.iridiummc.iny.internal.value.InySectionValue;
 import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.runtime.InyProvider;
-import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
 
 import java.util.*;
@@ -23,8 +20,8 @@ public final class InyConfigs {
     }
 
     /** Creates an immutable root configuration view. */
-    public static InyConfig create(InyValueAccess values, InySectionValue root, List<Token> tokens, InySource source, Iny context) {
-        return new DefaultInyConfig(values, root, source, context);
+    public static InyConfig create(InyValueAccess values, InySectionValue root) {
+        return new DefaultInyConfig(values, root);
     }
 
     /** Creates a navigable public view over an internal section node. */
@@ -181,13 +178,9 @@ public final class InyConfigs {
 
     private static final class DefaultInyConfig extends AbstractInySection implements InyConfig {
 
-        private final InySource source;
-        private final Iny context;
 
-        private DefaultInyConfig(InyValueAccess values, InySectionValue root, InySource source, Iny context) {
+        private DefaultInyConfig(InyValueAccess values, InySectionValue root) {
             super(values, root, "");
-            this.source = source;
-            this.context = context;
         }
 
         @Override
@@ -204,81 +197,6 @@ public final class InyConfigs {
         public Optional<Object> findValue(String path) {
             return find(path);
         }
-
-        /*@Override
-        public InyConfig setString(String path, String newValue) {
-            InyString inyString = new InyString(newValue);
-            return set(path, inyString);
-        }
-
-        @Override
-        public InyConfig setBoolean(String path, Boolean newValue) {
-            InyBoolean inyBoolean = new InyBoolean(newValue);
-            return set(path, inyBoolean);
-        }
-
-        @Override
-        public InyConfig setInteger(String path, BigInteger integer) {
-            InyInteger inyInteger = new InyInteger(integer);
-            return set(path, inyInteger);
-        }
-
-        @Override
-        public InyConfig setDecimal(String path, BigDecimal decimal) {
-            InyDecimal inyDecimal = new InyDecimal(decimal);
-            return set(path, inyDecimal);
-        }
-
-        @Override
-        public InyConfig setNull(String path) {
-            InyNull inyNull = InyNull.INSTANCE;
-            return set(path, inyNull);
-        }
-
-        @Override
-        public InyConfig setStringList(String path, List<String> newValue) {
-            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyString(raw)).toList();
-            InyList list = new InyList(values);
-            return set(path, list);
-        }
-
-        @Override
-        public InyConfig setBooleanList(String path, List<Boolean> newValue) {
-            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyBoolean(raw)).toList();
-            InyList list = new InyList(values);
-            return set(path, list);
-        }
-
-        @Override
-        public InyConfig setBigIntegerList(String path, List<BigInteger> newValue) {
-            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyInteger(raw)).toList();
-            InyList list = new InyList(values);
-            return set(path, list);
-        }
-
-        @Override
-        public InyConfig setBigDecimalList(String path, List<BigDecimal> newValue) {
-            List<InyValue> values = newValue.stream().map(raw -> (InyValue) new InyDecimal(raw)).toList();
-            InyList list = new InyList(values);
-            return set(path, list);
-        }
-
-        @Override
-        public void save(Path path) throws IOException {
-            Files.writeString(path, source.text());
-        }
-
-        private InyConfig set(String path, InyValue newValue) {
-            InyEntry entry = resolveEntry(path, path, true).orElseThrow();
-            int startOffset = entry.start().offset();
-            int endOffset = startOffset + entry.length();
-
-            StringBuilder builder = new StringBuilder(source.text());
-            builder.replace(startOffset, endOffset, ": " + newValue.toText());
-
-            InySource newSource = new InySource(source.name(), builder.toString());
-            return context.parse(newSource);
-        }*/
     }
 
     private static final class DefaultInySection extends AbstractInySection {

@@ -266,23 +266,6 @@ class InyFactoryTest {
         assertEquals(3, iny.factories().size());
     }
 
-    /*@Test
-    void factoriesWorkAfterSaving() {
-        InyConfig config = configuredTypes().build().parse("""
-                point: test:point(1, 2, 3)
-                string: "Hello, world!"
-                """);
-
-        Point point = config.get("point", Point.class);
-        assertEquals(new Point(1, 2, 3), point);
-
-        config = config.setString("string", "Goodbye!");
-        String string = config.get("string", String.class);
-        assertEquals("Goodbye!", string);
-        point = config.get("point", Point.class);
-        assertEquals(new Point(1, 2, 3), point);
-    }*/
-
     private static Iny.Builder configuredTypes() {
         return Iny.builder()
                 .registerFactory("test:point", Point.class, context -> {
