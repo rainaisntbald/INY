@@ -1,5 +1,10 @@
 package net.iridiummc.iny.internal;
 
+import net.iridiummc.iny.api.InyIdentifier;
+import net.iridiummc.iny.runtime.InyProvider;
+
+import java.util.Objects;
+
 public class Utils {
     public static String escapeString(String string) {
         StringBuilder sb = new StringBuilder();
@@ -25,6 +30,19 @@ public class Utils {
         }
 
         return sb.toString();
+    }
+
+    public static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
+        Objects.requireNonNull(identifier, "identifier");
+        Objects.requireNonNull(resultType, "resultType");
+        if (identifier.namespace().equals("core")) {
+            throw new IllegalArgumentException("The 'core' namespace is reserved for built-in INY factories");
+        }
+        if (identifier.namespace().equals("context")
+                && (!identifier.value().equals("value")
+                || !InyProvider.class.isAssignableFrom(resultType))) {
+            throw new IllegalArgumentException("The 'context' namespace is reserved for the context:value provider");
+        }
     }
 
 }

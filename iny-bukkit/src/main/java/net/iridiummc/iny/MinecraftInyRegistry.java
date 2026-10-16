@@ -8,6 +8,7 @@ import net.iridiummc.iny.exception.InySourceLoadException;
 import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
+import net.iridiummc.iny.internal.Utils;
 import net.iridiummc.iny.internal.annotation.AnnotatedMethodRegistrar;
 import net.iridiummc.iny.minecraft.MinecraftInyModule;
 import net.iridiummc.iny.readiness.Readiness;
@@ -182,7 +183,7 @@ final class MinecraftInyRegistry {
         ensureRegistrationOpen();
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(registration, "registration");
-        requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
+        Utils.requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
         OwnedFactoryRegistration ownedRegistration = new OwnedFactoryRegistration(owner, registration);
         if (registrations.putIfAbsent(registration.identifier(), ownedRegistration) != null) {
             throw new InyDuplicateFactoryException(registration.identifier());
@@ -202,7 +203,7 @@ final class MinecraftInyRegistry {
         ensureRegistrationOpen();
         Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(identifier, "identifier");
-        requireAvailableFactoryIdentifier(identifier, resultType);
+        Utils.requireAvailableFactoryIdentifier(identifier, resultType);
         if (!registrations.containsKey(identifier)) {
             throw new IllegalArgumentException("No INY factory is registered for " + identifier);
         }
@@ -423,17 +424,6 @@ final class MinecraftInyRegistry {
         if (factoriesSealed || readiness.state() == ReadinessState.FAILED) {
             throw new IllegalStateException(
                     "INY factory registration is closed; factories must be registered during the startup registration phase");
-        }
-    }
-
-    private static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
-        if (identifier.namespace().equals("core")) {
-            throw new IllegalArgumentException("The 'core' namespace is reserved for built-in INY factories");
-        }
-        if (identifier.namespace().equals("context")
-                && (!identifier.value().equals("value")
-                || !InyProvider.class.isAssignableFrom(resultType))) {
-            throw new IllegalArgumentException("The 'context' namespace is reserved for the context:value provider");
         }
     }
 

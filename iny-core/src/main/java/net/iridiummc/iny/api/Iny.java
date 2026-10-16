@@ -3,54 +3,34 @@ package net.iridiummc.iny.api;
 import net.iridiummc.iny.codec.InyDecodeContext;
 import net.iridiummc.iny.codec.InyDecoder;
 import net.iridiummc.iny.codec.InyDecoderRegistry;
-import net.iridiummc.iny.exception.InyMissingDecoderException;
-import net.iridiummc.iny.exception.InyInvalidProviderResultException;
-import net.iridiummc.iny.exception.InyNotProviderException;
-import net.iridiummc.iny.exception.InyDuplicateFactoryException;
-import net.iridiummc.iny.exception.InyFactoryExecutionException;
-import net.iridiummc.iny.exception.InyFactoryException;
-import net.iridiummc.iny.exception.InyFactoryTypeException;
-import net.iridiummc.iny.exception.InyInvalidFactoryResultException;
-import net.iridiummc.iny.exception.InyUnknownFactoryException;
+import net.iridiummc.iny.exception.*;
 import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
+import net.iridiummc.iny.internal.Utils;
+import net.iridiummc.iny.internal.annotation.AnnotatedMethodRegistrar;
 import net.iridiummc.iny.internal.codec.BuiltInDecoders;
 import net.iridiummc.iny.internal.codec.DefaultInyDecodeContext;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
-import net.iridiummc.iny.internal.annotation.AnnotatedMethodRegistrar;
 import net.iridiummc.iny.internal.config.InyConfigs;
 import net.iridiummc.iny.internal.factory.BuiltInFactories;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
 import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.parser.Parser;
-import net.iridiummc.iny.internal.source.SourceLoading;
 import net.iridiummc.iny.internal.runtime.ImmutableInyContextKeyRegistry;
-import net.iridiummc.iny.internal.value.InyBoolean;
-import net.iridiummc.iny.internal.value.InyCall;
-import net.iridiummc.iny.internal.value.InyDecimal;
-import net.iridiummc.iny.internal.value.InyInteger;
-import net.iridiummc.iny.internal.value.InyList;
-import net.iridiummc.iny.internal.value.InyNull;
-import net.iridiummc.iny.internal.value.InySectionValue;
-import net.iridiummc.iny.internal.value.InyString;
-import net.iridiummc.iny.internal.value.InyValue;
-import net.iridiummc.iny.source.InySource;
+import net.iridiummc.iny.internal.source.SourceLoading;
+import net.iridiummc.iny.internal.value.*;
 import net.iridiummc.iny.runtime.InyContextKey;
 import net.iridiummc.iny.runtime.InyContextKeyRegistry;
 import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.runtime.InyRunnable;
+import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
 
 import java.io.Reader;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -500,7 +480,7 @@ public final class Iny {
                 Class<T> resultType,
                 InyFactory<T> factory
         ) {
-            requireAvailableFactoryIdentifier(identifier, resultType);
+            Utils.requireAvailableFactoryIdentifier(identifier, resultType);
             return registerFactory(new InyFactoryRegistration<>(identifier, resultType, factory));
         }
 
@@ -591,7 +571,7 @@ public final class Iny {
          */
         public Builder registerFactory(InyFactoryRegistration<?> registration) {
             Objects.requireNonNull(registration, "registration");
-            requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
+            Utils.requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
             if (factories.putIfAbsent(registration.identifier(), registration) != null) {
                 throw new InyDuplicateFactoryException(registration.identifier());
             }
@@ -613,7 +593,7 @@ public final class Iny {
                 InyFactory<T> factory
         ) {
             Objects.requireNonNull(identifier, "identifier");
-            requireAvailableFactoryIdentifier(identifier, resultType);
+            Utils.requireAvailableFactoryIdentifier(identifier, resultType);
             if (!factories.containsKey(identifier)) {
                 throw new IllegalArgumentException("No INY factory is registered for " + identifier);
             }
@@ -727,19 +707,6 @@ public final class Iny {
             };
             factories.put(identifier, new InyFactoryRegistration(
                     identifier, InyProvider.class, factory));
-        }
-
-        private static void requireAvailableFactoryIdentifier(InyIdentifier identifier, Class<?> resultType) {
-            Objects.requireNonNull(identifier, "identifier");
-            Objects.requireNonNull(resultType, "resultType");
-            if (identifier.namespace().equals("core")) {
-                throw new IllegalArgumentException("The 'core' namespace is reserved for built-in INY factories");
-            }
-            if (identifier.namespace().equals("context")
-                    && (!identifier.value().equals("value")
-                    || !InyProvider.class.isAssignableFrom(resultType))) {
-                throw new IllegalArgumentException("The 'context' namespace is reserved for the context:value provider");
-            }
         }
     }
 }
