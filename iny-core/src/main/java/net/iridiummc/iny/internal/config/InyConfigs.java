@@ -168,14 +168,14 @@ public final class InyConfigs {
 
         @Override
         public boolean equals(Object other) {
-            if(!(other instanceof InySection otherSection)) return false;
+            if(!(other instanceof AbstractInySection otherSection)) return false;
             if(this == other) return true;
-            return this.entries().equals(otherSection.entries());
+            return this.section.equals(otherSection.section);
         }
 
         @Override
         public int hashCode() {
-            return this.entries().hashCode();
+            return this.section.hashCode();
         }
     }
 
