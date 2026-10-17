@@ -4,8 +4,14 @@ import net.iridiummc.iny.api.InyConfig;
 import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.exception.InyDuplicateFactoryException;
 import net.iridiummc.iny.exception.InyUnknownFactoryException;
+import net.iridiummc.iny.exception.InyUnknownContextKeyException;
+import net.iridiummc.iny.runtime.InyContextKey;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
+import net.iridiummc.iny.runtime.InyRuntimeContext;
 import org.bukkit.Server;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,6 +20,8 @@ import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,7 +42,8 @@ class MinecraftGlobalRegistryTest {
         assertSame(plugin, registry.plugin());
         assertSame(registry.iny(), registry.iny());
         assertTrue(registry.isReady());
-        assertEquals(6, registry.factories().size());
+        assertEquals(13, registry.factories().size());
+        assertTrue(registry.contextKeys().entries().isEmpty());
     }
 
     @Test
@@ -149,6 +158,60 @@ class MinecraftGlobalRegistryTest {
     }
 
     @Test
+    void annotatedRegistrationsUseTheExistingPluginOwnershipLifecycle() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin owner = plugin();
+        AnnotatedLibrary library = new AnnotatedLibrary();
+        registry.registerAnnotated(owner, library);
+        registry.sealFactories();
+
+        InyConfig config = registry.parse("""
+                factory: external:annotated_factory("created")
+                provider: external:annotated_provider(12)
+                runnable: external:annotated_runnable("executed")
+                """);
+        assertEquals("created", config.get("factory", String.class));
+        assertEquals("12", config.getProvider("provider", String.class)
+                .resolve(InyRuntimeContext.empty()));
+        config.getRunnable("runnable").run(InyRuntimeContext.empty());
+        assertEquals("executed", library.received.get());
+
+        registry.handlePluginDisable(owner);
+
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:annotated_factory")));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:annotated_provider")));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:annotated_runnable")));
+        assertThrows(InyUnknownFactoryException.class,
+                () -> config.get("factory", String.class));
+    }
+
+    @Test
+    void ownedAnnotatedRegistrationUsesExistingDuplicateAndStartupRules() {
+        MinecraftInyRegistry duplicateRegistry = new MinecraftInyRegistry(plugin());
+        Plugin owner = plugin();
+        duplicateRegistry.registerFactory(
+                owner, "external:annotated_factory", String.class, context -> "existing");
+
+        assertThrows(InyDuplicateFactoryException.class,
+                () -> duplicateRegistry.registerAnnotated(owner, new AnnotatedLibrary()));
+
+        MinecraftInyRegistry sealedRegistry = new MinecraftInyRegistry(plugin());
+        sealedRegistry.sealFactories();
+        assertThrows(IllegalStateException.class,
+                () -> sealedRegistry.registerAnnotated(owner, new AnnotatedLibrary()));
+    }
+
+    @Test
+    void bukkitFacadeExposesJavaPluginOwnedAnnotatedRegistration() throws ReflectiveOperationException {
+        assertEquals(INY.class, INY.class
+                .getMethod("registerAnnotated", JavaPlugin.class)
+                .getReturnType());
+        assertEquals(INY.class, INY.class
+                .getMethod("registerAnnotated", JavaPlugin.class, Object.class)
+                .getReturnType());
+    }
+
+    @Test
     void replacementTransfersFactoryOwnershipToTheReplacingProvider() {
         MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
         Plugin originalProvider = plugin();
@@ -163,6 +226,108 @@ class MinecraftGlobalRegistryTest {
         registry.handlePluginDisable(replacementProvider);
         assertThrows(InyUnknownFactoryException.class,
                 () -> registry.parse("value: external:value()\n").get("value", String.class));
+    }
+
+    @Test
+    void dependentPluginsCanRegisterRuntimeFactoriesInTheSharedRegistry() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin providerPlugin = plugin();
+        AtomicReference<String> received = new AtomicReference<>();
+        registry.registerProvider(providerPlugin, "external:text", context -> runtime -> "runtime");
+        registry.registerRunnable(providerPlugin, "external:capture", context -> {
+            InyProvider<String> value = context.arguments().getProvider(0, String.class);
+            return runtime -> received.set(value.resolve(runtime));
+        });
+        registry.sealFactories();
+
+        InyRunnable action = registry.parse(
+                "action: external:capture(external:text())").getRunnable("action");
+        action.run(InyRuntimeContext.empty());
+
+        assertEquals("runtime", received.get());
+        assertTrue(registry.factories().contains(InyIdentifier.parse("external:text")));
+        assertTrue(registry.factories().contains(InyIdentifier.parse("external:capture")));
+    }
+
+    @Test
+    void providerCanBeRetrievedAsRunnableThroughBukkitConfig() {
+        AtomicInteger calls = new AtomicInteger();
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        registry.registerProvider(plugin(), "external:value", context -> runtime -> calls.incrementAndGet());
+        registry.sealFactories();
+
+        registry.parse("value: external:value()").getRunnable("value")
+                .run(InyRuntimeContext.empty());
+
+        assertEquals(1, calls.get());
+    }
+
+    @Test
+    void disablingProviderRemovesItsRuntimeFactories() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
+        registry.registerRunnable(provider, "external:run", context -> runtime -> { });
+        registry.registerProvider(provider, "external:value", context -> runtime -> "value");
+        registry.sealFactories();
+
+        registry.handlePluginDisable(provider);
+
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:run")));
+        assertFalse(registry.factories().contains(InyIdentifier.parse("external:value")));
+    }
+
+    @Test
+    void replacementTransfersRuntimeFactoryOwnership() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin original = plugin();
+        Plugin replacement = plugin();
+        registry.registerProvider(original, "external:value", context -> runtime -> "original");
+        registry.replaceProvider(replacement, "external:value", context -> runtime -> "replacement");
+        registry.sealFactories();
+
+        registry.handlePluginDisable(original);
+        assertEquals("replacement", registry.parse("value: external:value()")
+                .getProvider("value", String.class).resolve(InyRuntimeContext.empty()));
+
+        registry.handlePluginDisable(replacement);
+        assertThrows(InyUnknownFactoryException.class,
+                () -> registry.parse("value: external:value()").getRunnable("value"));
+    }
+
+    @Test
+    void lateRuntimeFactoryRegistrationIsRejected() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
+        registry.sealFactories();
+
+        assertThrows(IllegalStateException.class,
+                () -> registry.registerRunnable(provider, "external:late", context -> runtime -> { }));
+        assertThrows(IllegalStateException.class,
+                () -> registry.registerProvider(provider, "external:late_value", context -> runtime -> "late"));
+    }
+
+    @Test
+    void pluginContextKeysFollowOwnershipAndRegistrationBarrier() {
+        MinecraftInyRegistry registry = new MinecraftInyRegistry(plugin());
+        Plugin provider = plugin();
+        InyContextKey<String> key = InyContextKey.of("external:message", String.class);
+        registry.registerContextKey(provider, key);
+        assertThrows(IllegalArgumentException.class,
+                () -> registry.registerContextKey(provider,
+                        InyContextKey.of("external:message", Integer.class)));
+        registry.sealFactories();
+
+        assertEquals(key, registry.contextKeys().require(key.identifier()));
+        assertEquals("hello", registry.parse("value: context:value(\"external:message\")")
+                .getProvider("value", String.class)
+                .resolve(InyRuntimeContext.builder().put(key, "hello").build()));
+
+        registry.handlePluginDisable(provider);
+        assertThrows(InyUnknownContextKeyException.class,
+                () -> registry.contextKeys().require(key.identifier()));
+        assertThrows(IllegalStateException.class,
+                () -> registry.registerContextKey(provider,
+                        InyContextKey.of("external:late", String.class)));
     }
 
     @Test
@@ -206,6 +371,25 @@ class MinecraftGlobalRegistryTest {
 
     private static Plugin plugin() {
         return plugin(Path.of("build", "test-plugin-data"), Map.of());
+    }
+
+    private static final class AnnotatedLibrary {
+        private final AtomicReference<String> received = new AtomicReference<>();
+
+        @net.iridiummc.iny.annotation.InyFactory("external:annotated_factory")
+        private String factory(String value) {
+            return value;
+        }
+
+        @net.iridiummc.iny.annotation.InyProvider("external:annotated_provider")
+        private String provider(int value) {
+            return Integer.toString(value);
+        }
+
+        @net.iridiummc.iny.annotation.InyRunnable("external:annotated_runnable")
+        private void runnable(String value) {
+            received.set(value);
+        }
     }
 
     private static Plugin plugin(Path dataFolder, Map<String, String> resources) {

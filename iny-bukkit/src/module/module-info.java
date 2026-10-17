@@ -11,6 +11,7 @@ module net.iridiummc.iny.bukkit {
     exports net.iridiummc.iny.exception;
     exports net.iridiummc.iny.factory;
     exports net.iridiummc.iny.readiness;
+    exports net.iridiummc.iny.runtime;
     exports net.iridiummc.iny.source;
     exports net.iridiummc.iny.value;
 }

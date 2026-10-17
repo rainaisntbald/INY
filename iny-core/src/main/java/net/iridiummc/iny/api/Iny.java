@@ -17,19 +17,17 @@ import net.iridiummc.iny.internal.codec.BuiltInDecoders;
 import net.iridiummc.iny.internal.codec.DefaultInyDecodeContext;
 import net.iridiummc.iny.internal.codec.InyValueAccess;
 import net.iridiummc.iny.internal.config.InyConfigs;
+import net.iridiummc.iny.internal.factory.BuiltInFactories;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
 import net.iridiummc.iny.internal.parser.Parser;
+import net.iridiummc.iny.internal.runtime.ImmutableInyContextKeyRegistry;
 import net.iridiummc.iny.internal.source.SourceLoading;
-import net.iridiummc.iny.internal.value.InyBoolean;
-import net.iridiummc.iny.internal.value.InyCall;
-import net.iridiummc.iny.internal.value.InyDecimal;
-import net.iridiummc.iny.internal.value.InyInteger;
-import net.iridiummc.iny.internal.value.InyList;
-import net.iridiummc.iny.internal.value.InyNull;
-import net.iridiummc.iny.internal.value.InySectionValue;
-import net.iridiummc.iny.internal.value.InyString;
-import net.iridiummc.iny.internal.value.InyValue;
+import net.iridiummc.iny.internal.value.*;
+import net.iridiummc.iny.runtime.InyContextKey;
+import net.iridiummc.iny.runtime.InyContextKeyRegistry;
+import net.iridiummc.iny.runtime.InyProvider;
+import net.iridiummc.iny.runtime.InyRunnable;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.value.InySection;
 
@@ -51,6 +49,7 @@ public final class Iny {
 
     private final InyDecoderRegistry decoders;
     private final Supplier<InyFactoryRegistry> factories;
+    private final Supplier<InyContextKeyRegistry> contextKeys;
     private final InyValueAccess values = new InyValueAccess() {
         @Override
         public <T> T resolve(Object value, Class<T> type, String path) {
@@ -61,15 +60,29 @@ public final class Iny {
         public <T> T decode(Object value, Class<T> type, String path) {
             return decodeValue(value, type, path);
         }
+
+        @Override
+        public <T> InyProvider<T> provider(Object value, Class<T> type, String path) {
+            return providerValue(value, type, path);
+        }
     };
 
-    private Iny(InyDecoderRegistry decoders, InyFactoryRegistry factories) {
-        this(decoders, () -> factories);
+    private Iny(
+            InyDecoderRegistry decoders,
+            InyFactoryRegistry factories,
+            InyContextKeyRegistry contextKeys
+    ) {
+        this(decoders, () -> factories, () -> contextKeys);
     }
 
-    private Iny(InyDecoderRegistry decoders, Supplier<InyFactoryRegistry> factories) {
+    private Iny(
+            InyDecoderRegistry decoders,
+            Supplier<InyFactoryRegistry> factories,
+            Supplier<InyContextKeyRegistry> contextKeys
+    ) {
         this.decoders = decoders;
         this.factories = Objects.requireNonNull(factories, "factories");
+        this.contextKeys = Objects.requireNonNull(contextKeys, "contextKeys");
     }
 
     /**
@@ -165,6 +178,15 @@ public final class Iny {
     }
 
     /**
+     * Returns the immutable runtime context-key registry used by this service.
+     *
+     * @return current context-key registry snapshot
+     */
+    public InyContextKeyRegistry contextKeys() {
+        return Objects.requireNonNull(contextKeys.get(), "context key registry source returned null");
+    }
+
+    /**
      * Creates a service sharing this service's decoders while obtaining factory snapshots from a caller-owned source.
      * This advanced hook supports lifecycle-scoped adapters; ordinary standalone services should use {@link #builder()}.
      *
@@ -172,7 +194,25 @@ public final class Iny {
      * @return a service backed by the supplied factory registry source
      */
     public Iny withFactoryRegistry(Supplier<InyFactoryRegistry> factoryRegistrySource) {
-        return new Iny(decoders, Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"));
+        return new Iny(decoders, Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"), contextKeys);
+    }
+
+    /**
+     * Creates a service sharing its decoders while obtaining live immutable factory and context-key snapshots.
+     * This advanced hook is intended for lifecycle-scoped adapters.
+     *
+     * @param factoryRegistrySource source of current factory snapshots
+     * @param contextKeyRegistrySource source of current context-key snapshots
+     * @return service backed by both supplied registry sources
+     */
+    public Iny withRegistries(
+            Supplier<InyFactoryRegistry> factoryRegistrySource,
+            Supplier<InyContextKeyRegistry> contextKeyRegistrySource
+    ) {
+        return new Iny(
+                decoders,
+                Objects.requireNonNull(factoryRegistrySource, "factoryRegistrySource"),
+                Objects.requireNonNull(contextKeyRegistrySource, "contextKeyRegistrySource"));
     }
 
     /** Resolves calls through the factory registry and ordinary values through decoders. */
@@ -224,6 +264,41 @@ public final class Iny {
             return decodeInternalValue(internalValue, type, path);
         }
         return decodeJavaValue(value, type, path, describeJavaType(value));
+    }
+
+    /** Lifts a configured value into a checked runtime provider. */
+    private <T> InyProvider<T> providerValue(Object value, Class<T> type, String path) {
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(path, "path");
+        Object resolved = resolveValue(value, Object.class, path);
+        if (resolved instanceof InyProvider<?> provider) {
+            return runtime -> {
+                Objects.requireNonNull(runtime, "runtime context");
+                Object result = provider.resolve(runtime);
+                return checkedProviderResult(path, result, type);
+            };
+        }
+        if (resolved instanceof InyRunnable runnable) {
+            throw new InyNotProviderException(path, type, runnable.getClass());
+        }
+        T constant = decodeValue(resolved, type, path);
+        if (constant == null) {
+            throw new InyInvalidProviderResultException(path, type, null);
+        }
+        return runtime -> {
+            Objects.requireNonNull(runtime, "runtime context");
+            return constant;
+        };
+    }
+
+    private static <T> T checkedProviderResult(String path, Object result, Class<T> type) {
+        Class<?> boxedType = boxed(type);
+        if (!boxedType.isInstance(result)) {
+            throw new InyInvalidProviderResultException(path, type, result);
+        }
+        @SuppressWarnings("unchecked")
+        T cast = (T) result;
+        return cast;
     }
 
     private <T> T decodeInternalValue(InyValue value, Class<T> type, String path) {
@@ -318,9 +393,11 @@ public final class Iny {
 
         private final Map<Class<?>, InyDecoder<?>> decoders = new LinkedHashMap<>();
         private final Map<InyIdentifier, InyFactoryRegistration<?>> factories = new LinkedHashMap<>();
+        private final Map<InyIdentifier, InyContextKey<?>> contextKeys = new LinkedHashMap<>();
 
         private Builder() {
             BuiltInDecoders.install(decoders);
+            BuiltInFactories.install(factories);
         }
 
         /**
@@ -357,6 +434,46 @@ public final class Iny {
         }
 
         /**
+         * Registers a typed runtime context key, rejecting duplicate identifiers.
+         *
+         * @param key context key to register
+         * @return this builder
+         */
+        public Builder registerContextKey(InyContextKey<?> key) {
+            Objects.requireNonNull(key, "key");
+            InyContextKey<?> existing = contextKeys.putIfAbsent(key.identifier(), key);
+            if (existing != null) {
+                if (!existing.type().equals(key.type())) {
+                    throw ImmutableInyContextKeyRegistry.incompatible(
+                            key.identifier(), existing.type(), key.type());
+                }
+                throw new IllegalArgumentException("A runtime context key is already registered for "
+                        + key.identifier());
+            }
+            return this;
+        }
+
+        /**
+         * Explicitly replaces an existing context key while preserving identifier/type consistency.
+         *
+         * @param key replacement context key
+         * @return this builder
+         */
+        public Builder replaceContextKey(InyContextKey<?> key) {
+            Objects.requireNonNull(key, "key");
+            InyContextKey<?> existing = contextKeys.get(key.identifier());
+            if (existing == null) {
+                throw new IllegalArgumentException("No runtime context key is registered for " + key.identifier());
+            }
+            if (!existing.type().equals(key.type())) {
+                throw ImmutableInyContextKeyRegistry.incompatible(
+                        key.identifier(), existing.type(), key.type());
+            }
+            contextKeys.put(key.identifier(), key);
+            return this;
+        }
+
+        /**
          * Registers a concise lambda factory under a parsed namespaced identifier.
          *
          * @param identifier namespaced factory identifier
@@ -370,6 +487,7 @@ public final class Iny {
                 Class<T> resultType,
                 InyFactory<T> factory
         ) {
+            Utils.requireAvailableFactoryIdentifier(identifier, resultType);
             return registerFactory(new InyFactoryRegistration<>(identifier, resultType, factory));
         }
 
@@ -387,6 +505,72 @@ public final class Iny {
         }
 
         /**
+         * Registers a factory that constructs deferred actions.
+         *
+         * @param identifier namespaced factory identifier
+         * @param factory deferred-action factory
+         * @return this builder
+         */
+        public Builder registerRunnable(
+                InyIdentifier identifier,
+                InyFactory<InyRunnable> factory
+        ) {
+            return registerFactory(identifier, InyRunnable.class, factory);
+        }
+
+        /**
+         * Registers a deferred-action factory using a canonical identifier string.
+         *
+         * @param identifier canonical factory identifier
+         * @param factory deferred-action factory
+         * @return this builder
+         */
+        public Builder registerRunnable(String identifier, InyFactory<InyRunnable> factory) {
+            return registerRunnable(InyIdentifier.parse(identifier), factory);
+        }
+
+        /**
+         * Registers a factory that constructs deferred value providers.
+         *
+         * @param identifier namespaced factory identifier
+         * @param factory deferred-value factory
+         * @param <T> provider result type
+         * @return this builder
+         */
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public <T> Builder registerProvider(
+                InyIdentifier identifier,
+                InyFactory<InyProvider<T>> factory
+        ) {
+            Objects.requireNonNull(factory, "factory");
+            return registerFactory(identifier, (Class) InyProvider.class, (InyFactory) factory);
+        }
+
+        /**
+         * Registers a deferred-value factory using a canonical identifier string.
+         *
+         * @param identifier canonical factory identifier
+         * @param factory deferred-value factory
+         * @param <T> provider result type
+         * @return this builder
+         */
+        public <T> Builder registerProvider(String identifier, InyFactory<InyProvider<T>> factory) {
+            return registerProvider(InyIdentifier.parse(identifier), factory);
+        }
+
+        /**
+         * Registers annotated methods declared directly by one explicitly supplied instance.
+         * Private methods are supported when their declaring package permits reflective access.
+         *
+         * @param instance instance whose declared methods will be inspected
+         * @return this builder
+         */
+        public Builder registerAnnotated(Object instance) {
+            AnnotatedMethodRegistrar.register(this, instance);
+            return this;
+        }
+
+        /**
          * Registers an advanced immutable registration, rejecting duplicate identifiers.
          *
          * @param registration registration to add
@@ -394,6 +578,7 @@ public final class Iny {
          */
         public Builder registerFactory(InyFactoryRegistration<?> registration) {
             Objects.requireNonNull(registration, "registration");
+            Utils.requireAvailableFactoryIdentifier(registration.identifier(), registration.resultType());
             if (factories.putIfAbsent(registration.identifier(), registration) != null) {
                 throw new InyDuplicateFactoryException(registration.identifier());
             }
@@ -415,6 +600,7 @@ public final class Iny {
                 InyFactory<T> factory
         ) {
             Objects.requireNonNull(identifier, "identifier");
+            Utils.requireAvailableFactoryIdentifier(identifier, resultType);
             if (!factories.containsKey(identifier)) {
                 throw new IllegalArgumentException("No INY factory is registered for " + identifier);
             }
@@ -436,6 +622,60 @@ public final class Iny {
         }
 
         /**
+         * Explicitly replaces a deferred-action factory.
+         *
+         * @param identifier registered factory identifier
+         * @param factory replacement deferred-action factory
+         * @return this builder
+         */
+        public Builder replaceRunnable(
+                InyIdentifier identifier,
+                InyFactory<InyRunnable> factory
+        ) {
+            return replaceFactory(identifier, InyRunnable.class, factory);
+        }
+
+        /**
+         * Explicitly replaces a deferred-action factory using a canonical identifier string.
+         *
+         * @param identifier canonical registered identifier
+         * @param factory replacement deferred-action factory
+         * @return this builder
+         */
+        public Builder replaceRunnable(String identifier, InyFactory<InyRunnable> factory) {
+            return replaceRunnable(InyIdentifier.parse(identifier), factory);
+        }
+
+        /**
+         * Explicitly replaces a deferred-value factory.
+         *
+         * @param identifier registered factory identifier
+         * @param factory replacement deferred-value factory
+         * @param <T> provider result type
+         * @return this builder
+         */
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public <T> Builder replaceProvider(
+                InyIdentifier identifier,
+                InyFactory<InyProvider<T>> factory
+        ) {
+            Objects.requireNonNull(factory, "factory");
+            return replaceFactory(identifier, (Class) InyProvider.class, (InyFactory) factory);
+        }
+
+        /**
+         * Explicitly replaces a deferred-value factory using a canonical identifier string.
+         *
+         * @param identifier canonical registered identifier
+         * @param factory replacement deferred-value factory
+         * @param <T> provider result type
+         * @return this builder
+         */
+        public <T> Builder replaceProvider(String identifier, InyFactory<InyProvider<T>> factory) {
+            return replaceProvider(InyIdentifier.parse(identifier), factory);
+        }
+
+        /**
          * Installs a lightweight group of related decoders and factories.
          *
          * @param module module to configure this builder
@@ -452,7 +692,28 @@ public final class Iny {
          * @return the configured immutable service
          */
         public Iny build() {
-            return new Iny(new InyDecoderRegistry(decoders), new InyFactoryRegistry(factories));
+            installContextValueFactory();
+            return new Iny(
+                    new InyDecoderRegistry(decoders),
+                    new InyFactoryRegistry(factories),
+                    new ImmutableInyContextKeyRegistry(contextKeys));
+        }
+
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        private void installContextValueFactory() {
+            InyIdentifier identifier = InyIdentifier.parse("context:value");
+            if (factories.containsKey(identifier)) {
+                return;
+            }
+            InyFactory<InyProvider<Object>> factory = context -> {
+                context.arguments().requireCount(1);
+                InyIdentifier keyIdentifier = InyIdentifier.parse(
+                        context.arguments().get(0, String.class));
+                InyContextKey<?> key = context.arguments().contextKeys().require(keyIdentifier);
+                return runtime -> Objects.requireNonNull(runtime, "runtime context").getUnchecked(key);
+            };
+            factories.put(identifier, new InyFactoryRegistration(
+                    identifier, InyProvider.class, factory));
         }
     }
 }

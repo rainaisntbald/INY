@@ -32,6 +32,7 @@ class CoreArchitectureTest {
                     "net.iridiummc.iny.codec",
                     "net.iridiummc.iny.exception",
                     "net.iridiummc.iny.factory",
+                    "net.iridiummc.iny.runtime",
                     "net.iridiummc.iny.source",
                     "net.iridiummc.iny.value"
             ), exports);

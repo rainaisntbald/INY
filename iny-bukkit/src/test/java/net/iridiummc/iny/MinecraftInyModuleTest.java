@@ -15,6 +15,7 @@ import java.lang.reflect.Proxy;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,12 +27,22 @@ class MinecraftInyModuleTest {
         Fixtures fixtures = fixtures();
         Iny iny = Iny.builder().install(new MinecraftInyModule(fixtures.server())).build();
 
-        assertEquals(6, iny.factories().size());
+        assertEquals(13, iny.factories().size());
+        assertTrue(iny.factories().contains(InyIdentifier.parse("core:sequence")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:location")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:world")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:material")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:vector")));
         assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:block")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("context:value")));
+        assertTrue(iny.contextKeys().entries().isEmpty());
+        assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:send_message")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:broadcast")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:give_item")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:play_sound")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:set_block")));
+        assertTrue(iny.factories().contains(InyIdentifier.parse("minecraft:item_stack")));
+        assertFalse(iny.factories().contains(InyIdentifier.parse("miencraft:broadcast")));
     }
 
     @Test
