@@ -2,7 +2,7 @@
 
 INY's Not YAML (INY) is a typed, extensible configuration library for Java and Bukkit plugins.
 
-It was built as an alternative to YAML for projects that need more than basic key-value configuration. INY supports nested sections, lists, strict typed access, custom decoders, namespaced factory calls, and a shared Bukkit registry that other plugins can extend.
+It was built as an alternative to YAML for projects that need more than basic key-value configuration. INY supports nested sections, lists, strict typed access, custom decoders, namespaced factory calls, runtime providers and actions, and a shared Bukkit registry that other plugins can extend.
 
 ```iny
 messages {
@@ -71,6 +71,8 @@ The consumer does not need to parse the value manually or depend on the provider
 * Custom decoders for ordinary scalar or section representations
 * Namespaced factory calls for constructing Java objects
 * Lazy factory resolution
+* Typed runtime contexts, deferred providers, and deferred actions
+* Static-to-provider lifting for composable runtime factories
 * Immutable configuration values
 * Contextual diagnostics with source positions and configuration paths
 * A standalone Java core with no Bukkit dependency

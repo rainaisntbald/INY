@@ -24,6 +24,7 @@ class BukkitArchitectureTest {
 
             assertEquals(Set.of(
                     "net.iridiummc.iny",
+                    "net.iridiummc.iny.annotation",
                     "net.iridiummc.iny.api",
                     "net.iridiummc.iny.codec",
                     "net.iridiummc.iny.exception",
