@@ -1,3 +1,5 @@
+## Deprecated, documentation is being moved to the [Wiki](https://github.com/rainaisntbald/INY/wiki)
+
 # Embedding INY Core
 
 Use INY Core when an application or library needs the parser and typed configuration model without Bukkit. The core is intentionally small: construct one immutable `Iny` service, parse configurations through it, and retain the resulting immutable `InyConfig` values.

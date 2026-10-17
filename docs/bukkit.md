@@ -1,3 +1,5 @@
+## Deprecated, documentation is being moved to the [Wiki](https://github.com/rainaisntbald/INY/wiki)
+
 # Using INY with Bukkit
 
 The Bukkit layer is the normal entry point for server plugins. The INY plugin owns one server-wide service, one factory registry, and the startup transition that makes configuration safe to consume.

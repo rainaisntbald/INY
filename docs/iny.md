@@ -1,3 +1,5 @@
+## Deprecated, documentation is being moved to the [Wiki](https://github.com/rainaisntbald/INY/wiki)
+
 # INY language reference
 
 INY (“It’s Not YAML”) is an indentation-independent configuration language. This document describes the file format; use the [Bukkit guide](bukkit.md) or [Core guide](core.md) for Java integration.

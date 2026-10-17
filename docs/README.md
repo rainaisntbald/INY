@@ -1,3 +1,5 @@
+## Deprecated, documentation is being moved to the [Wiki](https://github.com/rainaisntbald/INY/wiki)
+
 # INY documentation
 
 Choose the guide for the layer you are using:
