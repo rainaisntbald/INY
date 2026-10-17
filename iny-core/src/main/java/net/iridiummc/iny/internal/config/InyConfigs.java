@@ -107,14 +107,14 @@ public final class InyConfigs {
             Objects.requireNonNull(type, "type");
             String fullPath = fullPath(path);
             InyValue value = resolve(path, fullPath, true).orElseThrow();
-            if (!(value instanceof InyList(List<InyValue> listValues))) {
+            if (!(value instanceof InyList(List<InyValue> values1))) {
                 values.resolve(value, List.class, fullPath);
                 throw new AssertionError("List decoder accepted a non-list value");
             }
-            ArrayList<T> decoded = new ArrayList<>(listValues.size());
-            for (int index = 0; index < listValues.size(); index++) {
+            ArrayList<T> decoded = new ArrayList<>(values1.size());
+            for (int index = 0; index < values1.size(); index++) {
                 decoded.add(values.resolve(
-                        listValues.get(index), type, fullPath + "[" + index + "]"));
+                        values1.get(index), type, fullPath + "[" + index + "]"));
             }
             return Collections.unmodifiableList(decoded);
         }
