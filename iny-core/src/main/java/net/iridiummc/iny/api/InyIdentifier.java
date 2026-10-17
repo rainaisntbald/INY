@@ -18,7 +18,7 @@ public record InyIdentifier(String namespace, String value) {
     /** Validates and creates a namespaced identifier. */
     public InyIdentifier {
         if (namespace == null || value == null) {
-            throw new InyInvalidIdentifierException(String.valueOf(namespace) + ":" + value,
+            throw new InyInvalidIdentifierException(namespace + ":" + value,
                     "namespace and value must not be null");
         }
         if (!NAMESPACE.matcher(namespace).matches()) {

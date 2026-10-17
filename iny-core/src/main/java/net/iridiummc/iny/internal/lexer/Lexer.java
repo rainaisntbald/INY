@@ -239,8 +239,8 @@ public final class Lexer {
 
     private char readUnicodeEscape(SourcePosition escapePosition) {
         if (offset + 4 > text.length()) {
-            throw error(escapePosition, "incomplete unicode escape", "four hexadecimal digits",
-                    "Invalid unicode escape");
+            throw error(escapePosition, "incomplete Unicode escape", "four hexadecimal digits",
+                    "Invalid Unicode escape");
         }
         int value = 0;
         for (int count = 0; count < 4; count++) {
@@ -248,7 +248,7 @@ public final class Lexer {
             int digit = Character.digit(character, 16);
             if (digit < 0) {
                 throw error(positionAt(offset - 1, line, column - 1), printable(character), "a hexadecimal digit",
-                        "Invalid unicode escape");
+                        "Invalid Unicode escape");
             }
             value = value * 16 + digit;
         }

@@ -16,7 +16,7 @@ val moduleInfoClasspath = configurations.create("moduleInfoClasspath") {
 }
 val moduleInfoModules = moduleInfoClasspath.incoming.artifactView {
     componentFilter {
-        it is org.gradle.api.artifacts.component.ModuleComponentIdentifier
+        it is ModuleComponentIdentifier
                 && it.group == "io.papermc.paper"
                 && it.module == "paper-api"
     }

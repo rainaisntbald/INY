@@ -131,7 +131,7 @@ public final class Parser {
         List<InyValue> values = new ArrayList<>();
 
         while (isListMarker(peek())) {
-            Token dash = advance();
+            advance();
             if (check(TokenType.NEWLINE)) {
                 skipNewlines();
                 if (!isListMarker(peek())) {
@@ -156,7 +156,7 @@ public final class Parser {
             }
             skipNewlines();
 
-            if (stopBeforeStandaloneDash && !values.isEmpty() && isStandaloneDash()) {
+            if (stopBeforeStandaloneDash && isStandaloneDash()) {
                 break;
             }
             if (isListMarker(peek())) {

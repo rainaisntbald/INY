@@ -11,13 +11,7 @@ import net.iridiummc.iny.internal.value.InyValue;
 import net.iridiummc.iny.runtime.InyProvider;
 import net.iridiummc.iny.value.InySection;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /** Internal construction boundary for public configuration and section views. */
 public final class InyConfigs {
@@ -113,14 +107,14 @@ public final class InyConfigs {
             Objects.requireNonNull(type, "type");
             String fullPath = fullPath(path);
             InyValue value = resolve(path, fullPath, true).orElseThrow();
-            if (!(value instanceof InyList list)) {
+            if (!(value instanceof InyList(List<InyValue> listValues))) {
                 values.resolve(value, List.class, fullPath);
                 throw new AssertionError("List decoder accepted a non-list value");
             }
-            ArrayList<T> decoded = new ArrayList<>(list.values().size());
-            for (int index = 0; index < list.values().size(); index++) {
+            ArrayList<T> decoded = new ArrayList<>(listValues.size());
+            for (int index = 0; index < listValues.size(); index++) {
                 decoded.add(values.resolve(
-                        list.values().get(index), type, fullPath + "[" + index + "]"));
+                        listValues.get(index), type, fullPath + "[" + index + "]"));
             }
             return Collections.unmodifiableList(decoded);
         }
@@ -165,12 +159,10 @@ public final class InyConfigs {
         }
 
         @Override
-        public boolean equals(Object object) {
-            if (this == object) return true;
-            if (object instanceof AbstractInySection other) {
-                return section.equals(other.section);
-            }
-            return object instanceof InySection other && entries().equals(other.entries());
+        public boolean equals(Object other) {
+            if(!(other instanceof AbstractInySection otherSection)) return false;
+            if(this == other) return true;
+            return this.section.equals(otherSection.section);
         }
 
         @Override

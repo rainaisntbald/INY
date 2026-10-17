@@ -6,12 +6,7 @@ import net.iridiummc.iny.runtime.InyRunnable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * An insertion-ordered, immutable, navigable view of an INY section.
@@ -182,6 +177,7 @@ public interface InySection {
         return Collections.unmodifiableList(decoded);
     }
 
+
     private static <T> T cast(String path, Object value, Class<T> type) {
         if (value == null) {
             if (type.isPrimitive()) {
@@ -235,28 +231,6 @@ public interface InySection {
         throw new AssertionError("Validated paths always contain at least one segment");
     }
 
-    private static List<String> segments(String path) {
-        if (path == null) {
-            throw new InyInvalidPathException("null", "path must not be null");
-        }
-        if (path.isEmpty()) {
-            throw new InyInvalidPathException(path, "path must contain at least one segment");
-        }
-        if (!path.equals(path.trim())) {
-            throw new InyInvalidPathException(path, "leading or trailing whitespace is not allowed");
-        }
-
-        List<String> segments = List.of(path.split("\\.", -1));
-        for (int index = 0; index < segments.size(); index++) {
-            String segment = segments.get(index);
-            if (!segment.matches("[A-Za-z_][A-Za-z0-9_-]*")) {
-                throw new InyInvalidPathException(path,
-                        "segment " + (index + 1) + " ('" + segment + "') is not a valid bare key");
-            }
-        }
-        return segments;
-    }
-
     private static String actualType(Object value) {
         if (value == null) return "null";
         if (value instanceof String) return "string";
@@ -280,5 +254,27 @@ public interface InySection {
         if (type == double.class) return Double.class;
         if (type == char.class) return Character.class;
         return type;
+    }
+
+    private static List<String> segments(String path) {
+        if (path == null) {
+            throw new InyInvalidPathException("null", "path must not be null");
+        }
+        if (path.isEmpty()) {
+            throw new InyInvalidPathException(path, "path must contain at least one segment");
+        }
+        if (!path.equals(path.trim())) {
+            throw new InyInvalidPathException(path, "leading or trailing whitespace is not allowed");
+        }
+
+        List<String> segments = List.of(path.split("\\.", -1));
+        for (int index = 0; index < segments.size(); index++) {
+            String segment = segments.get(index);
+            if (!segment.matches("[A-Za-z_][A-Za-z0-9_-]*")) {
+                throw new InyInvalidPathException(path,
+                        "segment " + (index + 1) + " ('" + segment + "') is not a valid bare key");
+            }
+        }
+        return segments;
     }
 }

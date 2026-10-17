@@ -3,13 +3,7 @@ package net.iridiummc.iny.api;
 import net.iridiummc.iny.codec.InyDecodeContext;
 import net.iridiummc.iny.codec.InyDecoder;
 import net.iridiummc.iny.codec.InyDecoderRegistry;
-import net.iridiummc.iny.exception.InyMissingDecoderException;
-import net.iridiummc.iny.exception.InyDuplicateFactoryException;
-import net.iridiummc.iny.exception.InyFactoryExecutionException;
-import net.iridiummc.iny.exception.InyFactoryException;
-import net.iridiummc.iny.exception.InyFactoryTypeException;
-import net.iridiummc.iny.exception.InyInvalidFactoryResultException;
-import net.iridiummc.iny.exception.InyUnknownFactoryException;
+import net.iridiummc.iny.exception.*;
 import net.iridiummc.iny.factory.InyFactory;
 import net.iridiummc.iny.factory.InyFactoryRegistration;
 import net.iridiummc.iny.factory.InyFactoryRegistry;
@@ -22,6 +16,7 @@ import net.iridiummc.iny.internal.config.InyConfigs;
 import net.iridiummc.iny.internal.factory.BuiltInFactories;
 import net.iridiummc.iny.internal.factory.DefaultInyFactoryContext;
 import net.iridiummc.iny.internal.lexer.Lexer;
+import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.parser.Parser;
 import net.iridiummc.iny.internal.runtime.ImmutableInyContextKeyRegistry;
 import net.iridiummc.iny.internal.source.SourceLoading;
@@ -35,12 +30,7 @@ import net.iridiummc.iny.value.InySection;
 
 import java.io.Reader;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -157,7 +147,8 @@ public final class Iny {
      */
     public InyConfig parse(InySource source) {
         Objects.requireNonNull(source, "source");
-        InySectionValue root = new Parser(source, new Lexer(source).lex()).parse();
+        List<Token> tokens = new Lexer(source).lex();
+        InySectionValue root = new Parser(source, tokens).parse();
         return InyConfigs.create(values, root);
     }
 
@@ -248,7 +239,7 @@ public final class Iny {
                     path, call.identifier(), requestedType, declaredType, exception);
         }
 
-        if (result == null || !declaredType.isInstance(result) || !requestedType.isInstance(result)) {
+        if (!declaredType.isInstance(result) || !requestedType.isInstance(result)) {
             throw new InyInvalidFactoryResultException(
                     path, call.identifier(), requestedType, declaredType, result);
         }
@@ -321,7 +312,7 @@ public final class Iny {
 
     private <T> InyDecoder<T> directDecoder(Object value, Class<T> type, String path) {
         Class<?> boxedType = boxed(type);
-        if (value != null && boxedType.isInstance(value)) {
+        if (boxedType.isInstance(value)) {
             return new InyDecoder<>() {
                 @Override
                 public Class<T> targetType() {
@@ -339,17 +330,17 @@ public final class Iny {
     }
 
     private Object toJavaValue(InyValue value, String path) {
-        if (value instanceof InyString string) {
-            return string.value();
+        if (value instanceof InyString(String value4)) {
+            return value4;
         }
-        if (value instanceof InyBoolean bool) {
-            return bool.value();
+        if (value instanceof InyBoolean(boolean value3)) {
+            return value3;
         }
-        if (value instanceof InyInteger integer) {
-            return integer.value();
+        if (value instanceof InyInteger(java.math.BigInteger value2)) {
+            return value2;
         }
-        if (value instanceof InyDecimal decimal) {
-            return decimal.value();
+        if (value instanceof InyDecimal(java.math.BigDecimal value1)) {
+            return value1;
         }
         if (value instanceof InyNull) {
             return null;
@@ -357,10 +348,10 @@ public final class Iny {
         if (value instanceof InySectionValue section) {
             return InyConfigs.view(values, section, path);
         }
-        if (value instanceof InyList list) {
-            ArrayList<Object> values = new ArrayList<>(list.values().size());
-            for (int index = 0; index < list.values().size(); index++) {
-                values.add(resolveValue(list.values().get(index), Object.class, path + "[" + index + "]"));
+        if (value instanceof InyList(List<InyValue> values1)) {
+            ArrayList<Object> values = new ArrayList<>(values1.size());
+            for (int index = 0; index < values1.size(); index++) {
+                values.add(resolveValue(values1.get(index), Object.class, path + "[" + index + "]"));
             }
             return Collections.unmodifiableList(values);
         }
