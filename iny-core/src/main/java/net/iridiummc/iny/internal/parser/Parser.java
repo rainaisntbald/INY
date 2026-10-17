@@ -2,27 +2,16 @@ package net.iridiummc.iny.internal.parser;
 
 import net.iridiummc.iny.api.InyIdentifier;
 import net.iridiummc.iny.exception.InyParseException;
+import net.iridiummc.iny.internal.config.InyEntry;
 import net.iridiummc.iny.internal.lexer.Token;
 import net.iridiummc.iny.internal.lexer.TokenType;
+import net.iridiummc.iny.internal.value.*;
 import net.iridiummc.iny.source.InySource;
 import net.iridiummc.iny.source.SourcePosition;
-import net.iridiummc.iny.internal.value.InyBoolean;
-import net.iridiummc.iny.internal.value.InyCall;
-import net.iridiummc.iny.internal.value.InyDecimal;
-import net.iridiummc.iny.internal.value.InyInteger;
-import net.iridiummc.iny.internal.value.InyList;
-import net.iridiummc.iny.internal.value.InyNull;
-import net.iridiummc.iny.internal.value.InySectionValue;
-import net.iridiummc.iny.internal.value.InyString;
-import net.iridiummc.iny.internal.value.InyValue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /** Recursive-descent parser for the position-aware INY token stream. */
 public final class Parser {
@@ -44,13 +33,13 @@ public final class Parser {
     }
 
     private InySectionValue parseEntries(TokenType terminator) {
-        Map<String, InyValue> entries = new LinkedHashMap<>();
+        Map<String, InyEntry> entries = new LinkedHashMap<>();
         Map<String, SourcePosition> keyPositions = new LinkedHashMap<>();
 
         while (!check(terminator) && !check(TokenType.EOF)) {
             Token key = consume(TokenType.IDENTIFIER, "a bare key",
                     "Every section entry must begin with a key");
-            InyValue value = parseEntryValue(key);
+            InyEntry value = parseEntry(key);
 
             SourcePosition previous = keyPositions.putIfAbsent(key.value(), key.position());
             if (previous != null) {
@@ -78,31 +67,54 @@ public final class Parser {
         return new InySectionValue(entries);
     }
 
-    private InyValue parseEntryValue(Token key) {
-        if (match(TokenType.LEFT_BRACE)) {
-            return parseBracedSection();
+    private InyEntry parseEntry(Token key) {
+        SourcePosition keyPosition = key.position();
+        SourcePosition start = new SourcePosition(keyPosition.sourceName(), keyPosition.offset() + key.lexeme().length(), keyPosition.line(), keyPosition.column());
+        InyValue value = null;
+
+        if (check(TokenType.LEFT_BRACE)) {
+            advance();
+            value = parseBracedSection();
         }
-        if (!match(TokenType.COLON)) {
+
+        if (!check(TokenType.COLON) && value == null) {
             throw error(peek(), "':' or '{' after key '" + key.value() + "'",
                     "Missing structural separator after key");
         }
 
-        if (match(TokenType.LEFT_BRACE)) {
-            return parseBracedSection();
+        if(value == null) {
+            advance();
         }
+
+        if (check(TokenType.LEFT_BRACE)) {
+            advance();
+            value = parseBracedSection();
+        }
+
         if (check(TokenType.NEWLINE)) {
             skipNewlines();
             if (check(TokenType.LEFT_BRACE)) {
                 advance();
-                return parseBracedSection();
+                value = parseBracedSection();
             }
             if (isListMarker(peek())) {
-                return parseList(false);
+                value = parseList(false);
             }
-            throw error(peek(), "'{' or a dash list after the line boundary",
-                    "A value placed after a key's newline must be structural");
+            if(value == null) {
+                throw error(peek(), "'{' or a dash list after the line boundary",
+                        "A value placed after a key's newline must be structural");
+            }
         }
-        return parseValue();
+
+        if(value == null) {
+            value = parseValue();
+        }
+
+        Token lastToken = peekPrevious();
+        int lastTokenEndOffset = lastToken.position().offset() + lastToken.lexeme().length();
+        int valueLength = lastTokenEndOffset - start.offset();
+
+        return new InyEntry(value, start, valueLength);
     }
 
     private InySectionValue parseBracedSection() {
@@ -324,6 +336,10 @@ public final class Parser {
             current++;
         }
         return token;
+    }
+
+    private Token peekPrevious() {
+        return tokens.get(current - 1);
     }
 
     private Token peek() {

@@ -1,19 +1,18 @@
 package net.iridiummc.iny.internal.value;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
+import net.iridiummc.iny.internal.config.InyEntry;
+
+import java.util.*;
 
 /** Internal immutable section node. */
-public record InySectionValue(Map<String, InyValue> entries) implements InyValue {
+public record InySectionValue(Map<String, InyEntry> entries) implements InyValue {
 
     public InySectionValue {
         Objects.requireNonNull(entries, "entries");
-        LinkedHashMap<String, InyValue> copy = new LinkedHashMap<>();
-        entries.forEach((key, value) -> copy.put(
+        LinkedHashMap<String, InyEntry> copy = new LinkedHashMap<>();
+        entries.forEach((key, entry) -> copy.put(
                 Objects.requireNonNull(key, "section key"),
-                Objects.requireNonNull(value, "section value")));
+                Objects.requireNonNull(entry, "section value")));
         entries = Collections.unmodifiableMap(copy);
     }
 

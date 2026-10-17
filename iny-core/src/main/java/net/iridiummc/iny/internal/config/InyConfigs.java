@@ -50,8 +50,10 @@ public final class InyConfigs {
         @Override
         public Map<String, Object> entries() {
             LinkedHashMap<String, Object> entries = new LinkedHashMap<>();
-            section.entries().forEach((key, value) ->
-                    entries.put(key, values.resolve(value, Object.class, childPath(key))));
+            section.entries().forEach((key, entry) -> {
+                InyValue value = entry.value();
+                entries.put(key, values.resolve(value, Object.class, childPath(key)));
+            });
             return Collections.unmodifiableMap(entries);
         }
 
@@ -123,25 +125,30 @@ public final class InyConfigs {
             return Collections.unmodifiableList(decoded);
         }
 
-        private Optional<InyValue> resolve(String relativePath, String fullPath, boolean required) {
+        protected Optional<InyValue> resolve(String relativePath, String fullPath, boolean required) {
+            Optional<InyEntry> entry = resolveEntry(relativePath, fullPath, required);
+            return entry.map(InyEntry::value);
+        }
+
+        protected Optional<InyEntry> resolveEntry(String relativePath, String fullPath, boolean required) {
             InyPath path = InyPath.parse(relativePath);
             InySectionValue current = section;
 
             for (int index = 0; index < path.segments().size(); index++) {
                 String segment = path.segments().get(index);
-                InyValue value = current.entries().get(segment);
+                InyEntry entry = current.entries().get(segment);
                 boolean finalSegment = index == path.segments().size() - 1;
-                if (value == null) {
+                if (entry == null) {
                     if (required) {
                         throw new InyMissingValueException(fullPath, segment, index, finalSegment);
                     }
                     return Optional.empty();
                 }
                 if (finalSegment) {
-                    return Optional.of(value);
+                    return Optional.of(entry);
                 }
-                if (!(value instanceof InySectionValue childSection)) {
-                    throw new InyPathTraversalException(fullPath, segment, value.actualType());
+                if (!(entry.value() instanceof InySectionValue childSection)) {
+                    throw new InyPathTraversalException(fullPath, segment, entry.value().actualType());
                 }
                 current = childSection;
             }
