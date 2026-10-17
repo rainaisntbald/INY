@@ -163,6 +163,27 @@ public final class Parser {
         if (values.isEmpty()) {
             throw error(peek(), "at least one dash entry", "Empty dash lists have no representation in INY v1");
         }
+
+        return new InyList(values);
+    }
+
+    private InyList parseInlineList() {
+        List<InyValue> values = new ArrayList<>();
+        skipNewlines();
+
+        boolean continueFlag = !check(TokenType.RIGHT_SQUARE);
+
+        while(continueFlag) {
+            skipNewlines();
+            values.add(parseValue());
+            skipNewlines();
+            if(!check(TokenType.RIGHT_SQUARE)) consume(TokenType.COMMA, ", or ]",
+                    "Inline lists must be comma separated and surrounded by square brackets");
+            else continueFlag = false;
+        }
+
+        advance();
+
         return new InyList(values);
     }
 
@@ -176,6 +197,9 @@ public final class Parser {
         }
         if (isListMarker(token)) {
             return parseList(false);
+        }
+        if (match(TokenType.LEFT_SQUARE)) {
+            return parseInlineList();
         }
         if (match(TokenType.STRING)) {
             return new InyString(token.value());
@@ -260,6 +284,7 @@ public final class Parser {
                 || token.type() == TokenType.IDENTIFIER
                 || token.type() == TokenType.NAMESPACED_IDENTIFIER
                 || token.type() == TokenType.LEFT_BRACE
+                || token.type() == TokenType.LEFT_SQUARE
                 || isListMarker(token);
     }
 

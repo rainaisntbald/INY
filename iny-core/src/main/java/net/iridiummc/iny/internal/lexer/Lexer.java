@@ -47,7 +47,11 @@ public final class Lexer {
                 single(TokenType.RIGHT_PARENTHESIS);
             } else if (character == ',') {
                 single(TokenType.COMMA);
-            } else if (character == '"') {
+            } else if (character == '[') {
+                single(TokenType.LEFT_SQUARE);
+            } else if (character == ']') {
+                single(TokenType.RIGHT_SQUARE);
+            }else if (character == '"') {
                 lexString();
             } else if (isIdentifierStart(character)) {
                 lexIdentifier();
